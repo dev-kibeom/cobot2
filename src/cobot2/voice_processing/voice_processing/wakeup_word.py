@@ -4,7 +4,7 @@ from openwakeword.model import Model
 from scipy.signal import resample
 from ament_index_python.packages import get_package_share_directory
 
-package_path = get_package_share_directory("pick_and_place_voice")
+package_path = get_package_share_directory("voice_processing")
 MODEL_NAME = "hello_rokey_8332_32.tflite"
 MODEL_PATH = os.path.join(package_path, f"resource/{MODEL_NAME}")
 

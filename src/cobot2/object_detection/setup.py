@@ -1,3 +1,5 @@
+import os
+from glob import glob
 from setuptools import find_packages, setup
 
 package_name = 'object_detection'
@@ -10,8 +12,11 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'resource'), ['resource/best.pt', 
+                                                           'resource/class_name_tool.json',
+                                                           'resource/class_name_fruits.json']),
     ],
-    install_requires=['setuptools'],
+    install_requires=['setuptools', 'od_msg'],
     zip_safe=True,
     maintainer='rokey',
     maintainer_email='rokey@todo.todo',
