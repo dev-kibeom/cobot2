@@ -6,7 +6,7 @@ from std_msgs.msg import String
 from rclpy.action import ActionClient
 from std_srvs.srv import Trigger
 
-from recipe_msgs.action import Recipe
+from command.action import Command
 
 class StateManager(Node):
     def __init__(self):
@@ -24,10 +24,10 @@ class StateManager(Node):
         self.sliced_offset = 0
         
         # 파싱된 레시피 받는 토픽, 실행자와 액션 클라이언트, 관리재 잠금 해제 서비스
-        self.recipe_sub = self.create_subscription(String, '/parsed_recipe', self.recipe_callback, 10)
-        self._action_client = ActionClient(self, Recipe, 'execute_recipe')
+        self.command_sub = self.create_subscription(String, '/voice_command', self.recipe_callback, 10)
+        self._action_client = ActionClient(self, Command, 'execute_command')
         self.unlock_srv = self.create_service(Trigger, 'unlock_system', self.unlock_callback)
-        self.status_pub = self.create_publisher(String, '/cooking_status', 10)
+        self.status_pub = self.create_publisher(String, '/status', 10)
         
         self.get_logger().info("🧠 State Manager가 대기 중입니다 (상태: IDLE).")
         
@@ -55,8 +55,8 @@ class StateManager(Node):
         if not is_recovery:
             self.state = "EXECUTING"
             
-        goal_msg = Recipe.Goal()
-        goal_msg.recipe_sequence = json.dumps(sequence, ensure_ascii=False)
+        goal_msg = Command.Goal()
+        goal_msg.command = json.dumps(sequence, ensure_ascii=False)
         
         self.get_logger().info("⏳ Executer 연결 대기 중...")
         self._action_client.wait_for_server()

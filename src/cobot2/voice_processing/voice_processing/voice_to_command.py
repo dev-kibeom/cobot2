@@ -1,23 +1,22 @@
 # ros2 service call /get_keyword std_srvs/srv/Trigger "{}"
 
 import os
+import time
 import rclpy
 import pyaudio
-import tempfile
+import threading
 
 from rclpy.node import Node
+from std_msgs.msg import String
 
 from ament_index_python.packages import get_package_share_directory
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
-# from langchain.chains import LLMChain
 
-from std_srvs.srv import Trigger
-
-from voice_processing.MicController import MicController, MicConfig
-from voice_processing.wakeup_word import WakeupWord
 from voice_processing.stt import STT
+from voice_processing.wakeup_word import WakeupWord
+from voice_processing.mic_controller import MicController, MicConfig
 
 ############ Package Path & Environment Setting ############
 current_dir = os.getcwd()
@@ -26,17 +25,17 @@ package_path = get_package_share_directory("voice_processing")
 is_laod = load_dotenv(dotenv_path=os.path.join(package_path, ".env"))
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
-############ AI Processor ############
-# class AIProcessor:
-#     def __init__(self):
 
-
-
-############ GetKeyword Node ############
-class GetKeyword(Node):
+class VoiceToCommand(Node):
     def __init__(self):
+        super().__init__("get_keyword_node")
+        
+        # ====================== 노드 통신 ====================== #
+        self.command_pub = self.create_publisher(String, '/voice_command', 10)
+        # ===================================================== #
+        
         self.llm = ChatOpenAI(
-            model="gpt-4o", temperature=0.5, openai_api_key=openai_api_key
+            model="gpt-4o", temperature=0.2, openai_api_key=openai_api_key
         )
 
         prompt_content = """
@@ -78,7 +77,6 @@ class GetKeyword(Node):
         # self.lang_chain = LLMChain(llm=self.llm, prompt=self.prompt_template)
         self.stt = STT(openai_api_key=openai_api_key)
 
-        super().__init__("get_keyword_node")
         # 오디오 설정
         mic_config = MicConfig(
             chunk=12000,
@@ -90,69 +88,69 @@ class GetKeyword(Node):
             buffer_size=24000,
         )
         self.mic_controller = MicController(config=mic_config)
-        # self.ai_processor = AIProcessor()
-
-        self.get_logger().info("MicRecorderNode initialized.")
-        self.get_logger().info("wait for client's request...")
-        self.get_keyword_srv = self.create_service(
-            Trigger, "get_keyword", self.get_keyword
-        )
         self.wakeup_word = WakeupWord(mic_config.buffer_size)
 
-    def extract_keyword(self, output_message):
-        response = self.lang_chain.invoke({"user_input": output_message})
-        result = response.content
+        # 블로킹 방지를 위한 리스닝 스레드 시작
+        self.get_logger().info("👂 Voice Processing Node가 백그라운드에서 듣기를 시작합니다...")
+        self.listen_thread = threading.Thread(target=self.continuous_listen, daemon=True)
+        self.listen_thread.start()
 
-        object, target = result.strip().split("/")
+    def continuous_listen(self):
+        """wakeup word를 무한 대기하며 퍼블리싱"""
+        while rclpy.ok():
+            try:
+                self.mic_controller.open_stream()
+                self.wakeup_word.set_stream(self.mic_controller.stream)
+            except OSError:
+                self.get_logger().error("마이크 스트림 에러. 3초 후 재시도합니다.")
+                time.sleep(3)
+                continue
 
-        object = object.split()
-        target = target.split()
-
-        print(f"llm's response: {object}")
-        print(f"object: {object}")
-        print(f"target: {target}")
-        return object
-    
-    def get_keyword(self, request, response):  # 요청과 응답 객체를 받아야 함
-        try:
-            print("open stream")
-            self.mic_controller.open_stream()
-            self.wakeup_word.set_stream(self.mic_controller.stream)
-        except OSError:
-            self.get_logger().error("Error: Failed to open audio stream")
-            self.get_logger().error("please check your device index")
-            return response
-
-        self.get_logger().info("Waiting for wakeup word...")
-        while not self.wakeup_word.is_wakeup():
-            pass
-
-        # Wakeup Word 감지 직후, 열려있는 스트림을 이용하여 녹음 시작
-        self.get_logger().info("[Wakeword detected] 네, 말씀하세요. ")
-        self.mic_controller.record_audio()
+            self.get_logger().info("💤 'Hello Rokey' 웨이크업 워드 대기 중...")
+            
+            # wakeup_word 감지루프
+            while not self.wakeup_word.is_wakeup() and rclpy.ok():
+                pass
+            
+            if not rclpy.ok():
+                break
+            
+            self.get_logger().info("🌟 [웨이크업 감지] 네, 말씀하세요!")
+            self.mic_controller.record_audio()
+            
+            temp_wav_path = "/tmp/command.wav"
+            self.mic_controller.save_wav(temp_wav_path)
+            
+            # STT 수행 전에 자원 충돌방지를 위해 마이크 스트림 닫기
+            self.mic_controller.close_stream()
+            
+            self.get_logger().info("🧠 STT 및 LLM 분석 중...")
+            output_message = self.stt.speech2text(temp_wav_path)
+            
+            # LLM 체인 실행
+            response = self.lang_chain.invoke({"user_input": output_message})
+            sequence_json = response.content.strip()
+            
+            self.get_logger().warn(f"LLM 출력결과:\n{sequence_json}")
+            
+            # 추출된 JSON 시퀸스를 토픽으로 발행
+            msg = String()
+            msg.data = sequence_json
+            self.command_pub.publish(msg)
+            self.get_logger().info("✅ /voice_command 토픽으로 JSON 시퀀스 발행 완료!")
         
-        # 임시 저장 후 스트림 닫기
-        temp_wav_path = "/tmp/command.wav"
-        self.mic_controller.save_wav(temp_wav_path)
-        self.mic_controller.close_stream()
-        
-        # STT --> Keword Extract --> Embedding
-        output_message = self.stt.speech2text(temp_wav_path)
-        keyword = self.extract_keyword(output_message)
-
-        self.get_logger().warn(f"Detected targets: {keyword}")
-
-        # 응답 객체 설정
-        response.success = True
-        response.message = " ".join(keyword)  # 감지된 키워드를 응답 메시지로 반환
-        return response
-
 def main():
     rclpy.init()
-    node = GetKeyword()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    node = VoiceToCommand()
+    
+    try:
+        # spin은 다른 노드 통신 처리를 위해 그대로 둠 (오디오 처리는 스레드가 담당)
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        node.get_logger().info("프로그램을 종료합니다.")
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

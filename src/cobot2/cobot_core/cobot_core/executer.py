@@ -7,7 +7,7 @@ from rclpy.node import Node
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.executors import MultiThreadedExecutor
 
-from recipe_msgs.action import Recipe
+from command.action import Command
 from core.action_manager import ActionManager
 
 # 로봇 설정 상수 (필요에 따라 수정)
@@ -20,9 +20,9 @@ ROBOT_TCP = "GripperDA_v1"
 DR_init.__dsr__id = ROBOT_ID
 DR_init.__dsr__model = ROBOT_MODEL
 
-class RecipeExecuter(Node):
+class CommandExecuter(Node):
   def __init__(self):
-    super().__init__('recipe_executer')
+    super().__init__('command_executer')
     
     # 초기화
     self.init_dsr()
@@ -30,13 +30,13 @@ class RecipeExecuter(Node):
     
     self._action_server = ActionServer(
       self,
-      Recipe,
-      'execute_recipe',
+      Command,
+      'execute_command',
       execute_callback=self.execute_callback,
       goal_callback=self.goal_callback,
       cancel_callback=self.cancel_callback
     )
-    self.get_logger().info("🚀 Recipe Action Server Ready.")
+    self.get_logger().info("🚀 Action Server Ready.")
     
   def init_dsr(self):
     """두산 로봇의 초기화 설정"""
@@ -69,9 +69,9 @@ class RecipeExecuter(Node):
   
   async def execute_callback(self, goal_handle):
     """독립된 스레드에서 실제 로봇 동작 수행"""
-    sequence = json.loads(goal_handle.request.recipe_sequence)
-    result = Recipe.Result()
-    feedback = Recipe.Feedback()
+    sequence = json.loads(goal_handle.request.command)
+    result = Command.Result()
+    feedback = Command.Feedback()
     
     self.action_manager.is_error = False
     self.action_manager.perform('clear_alarm')
@@ -112,7 +112,7 @@ class RecipeExecuter(Node):
     
     goal_handle.succeed()
     result.success = True
-    result.message = "Recipe Completed Successfully"
+    result.message = "Completed Successfully"
     return result
       
 
@@ -133,7 +133,7 @@ def main(args=None):
       print(f"DSR_ROBOT2 Load Error: {e}")
       
     executor = MultiThreadedExecutor(num_threads=4)
-    node = RecipeExecuter()
+    node = CommandExecuter()
     
     executor.add_node(dsr_node)
     executor.add_node(node)
