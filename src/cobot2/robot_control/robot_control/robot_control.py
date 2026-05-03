@@ -74,8 +74,8 @@ class RobotController(Node):
 
     def transform_to_base(self, camera_coords, gripper2cam_path, robot_pos):
         """
-        Converts 3D coordinates from the camera coordinate system
-        to the robot's base coordinate system.
+        카메라 좌표를 베이스 좌표로 변환하고, 
+        그리퍼의 접근 방향(Z축)을 기준으로 정밀한 오프셋을 적용.
         """
         gripper2cam = np.load(gripper2cam_path)
         coord = np.append(np.array(camera_coords), 1)  # Homogeneous coordinate
@@ -83,11 +83,20 @@ class RobotController(Node):
         x, y, z, rx, ry, rz = robot_pos
         base2gripper = self.get_robot_pose_matrix(x, y, z, rx, ry, rz)
 
-        # 좌표 변환 (그리퍼 → 베이스)
+        # 카메라 좌표 -> 베이스 좌표
         base2cam = base2gripper @ gripper2cam
-        td_coord = np.dot(base2cam, coord)
+        target_base_coord = np.dot(base2cam, coord)[:3]
+        
+        # 그리퍼의 Z축 방향 단위 벡터 추출
+        approach_vector = base2gripper[:3, 2]
+        
+        # 접근 방향 벡터를 따라 DEPTH_OFFSET 적용
+        target_base_coord += approach_vector * DEPTH_OFFSET
+        
+        # 바닥 충돌 방지 (Z의 최솟값 설정)
+        target_base_coord[2] = max(target_base_coord[2], MIN_DEPTH)
 
-        return td_coord[:3]
+        return target_base_coord
 
     def robot_control(self):
         target_list = []
@@ -134,12 +143,10 @@ class RobotController(Node):
             robot_posx = get_current_posx()[0]
             td_coord = self.transform_to_base(result, gripper2cam_path, robot_posx)
 
-            if td_coord[2] and sum(td_coord) != 0:
-                td_coord[2] += DEPTH_OFFSET  # DEPTH_OFFSET
-                td_coord[2] = max(td_coord[2], MIN_DEPTH)  # MIN_DEPTH: float = 2.0
-
             target_pos = list(td_coord[:3]) + robot_posx[3:]
-        return target_pos
+            return target_pos
+        
+        return None
 
     def init_robot(self):
         JReady = [0, 0, 90, 0, 90, 0]
