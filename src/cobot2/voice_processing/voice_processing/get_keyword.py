@@ -3,6 +3,8 @@
 import os
 import rclpy
 import pyaudio
+import tempfile
+
 from rclpy.node import Node
 
 from ament_index_python.packages import get_package_share_directory
@@ -12,8 +14,8 @@ from langchain.prompts import PromptTemplate
 # from langchain.chains import LLMChain
 
 from std_srvs.srv import Trigger
-from voice_processing.MicController import MicController, MicConfig
 
+from voice_processing.MicController import MicController, MicConfig
 from voice_processing.wakeup_word import WakeupWord
 from voice_processing.stt import STT
 
@@ -108,16 +110,26 @@ class GetKeyword(Node):
         except OSError:
             self.get_logger().error("Error: Failed to open audio stream")
             self.get_logger().error("please check your device index")
-            return None
+            return response
 
+        self.get_logger().info("Waiting for wakeup word...")
         while not self.wakeup_word.is_wakeup():
             pass
 
+        # Wakeup Word 감지 직후, 열려있는 스트림을 이용하여 녹음 시작
+        self.get_logger().info("[Wakeword detected] 네, 말씀하세요. ")
+        self.mic_controller.record_audio()
+        
+        # 임시 저장 후 스트림 닫기
+        temp_wav_path = "/tmp/command.wav"
+        self.mic_controller.save_wav(temp_wav_path)
+        self.mic_controller.close_stream()
+        
         # STT --> Keword Extract --> Embedding
-        output_message = self.stt.speech2text()
+        output_message = self.stt.speech2text(temp_wav_path)
         keyword = self.extract_keyword(output_message)
 
-        self.get_logger().warn(f"Detected tools: {keyword}")
+        self.get_logger().warn(f"Detected targets: {keyword}")
 
         # 응답 객체 설정
         response.success = True
