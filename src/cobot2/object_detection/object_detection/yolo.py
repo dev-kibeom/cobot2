@@ -27,23 +27,32 @@ class YoloModel:
             class_dict = json.load(file)
             self.reversed_class_dict = {v: int(k) for k, v in class_dict.items()}
 
-    def get_frames(self, img_node, duration=1.0):
-        """get frames while target_time"""
-        end_time = time.time() + duration
+    def get_frames(self, img_node, target_count=5, timeout=2.0):
+        """
+        정확히 서로 다른 'target_count' 장의 프레임을 모읍니다.
+        timeout 시간이 지나면 모인 만큼만 반환합니다.
+        """
+        
         frames = {}
+        end_time = time.time() + timeout
 
-        while time.time() < end_time:
-            rclpy.spin_once(img_node)
+        while len(frames) < target_count and time.time() < end_time:
+            # 큐에 쌓인 콜백을 처리 (timeout 0.1초 주어 CPU 점유율 하락 방지)
+            rclpy.spin_once(img_node, timeout_sec=0.1)
+            
             frame = img_node.get_color_frame()
             stamp = img_node.get_color_frame_stamp()
-            if frame is not None:
+            
+            # 유효한 프레임이고 이전과 똑같은 타임스탬프가 아닌 경우에만
+            if frame is not None and stamp not in frames:
                 frames[stamp] = frame
-            time.sleep(0.01)
+            
+            # time.sleep(0.01) -> 기존의 인자없는 논블로킹 spin_once와 강제휴식
 
         if not frames:
-            print("No frames captured in %.2f seconds", duration)
+            print(f"No frames captured within {timeout} seconds.")
 
-        print("%d frames captured", len(frames))
+        print(f"Captured {len(frames)} valid frames.")
         return list(frames.values())
 
     def get_best_detection(self, img_node, target):
