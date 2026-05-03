@@ -9,6 +9,7 @@ log/
 # 레거시 및 공용 라이브러리
 # ==========================================
 src/doosan-robot2/
+src/backup
 src/cobot1
 src/robo_chef
 

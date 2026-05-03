@@ -35,28 +35,40 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 ############ GetKeyword Node ############
 class GetKeyword(Node):
     def __init__(self):
-
-
         self.llm = ChatOpenAI(
             model="gpt-4o", temperature=0.5, openai_api_key=openai_api_key
         )
 
         prompt_content = """
-        당신은 사용자의 문장에서 특정 과일과 목적지를 추출해야 합니다.
-        <목표>문장에서 다음 리스트에 포함된 과일을 최대한 정확히 추출하세요.
-        문장에 등장하는 과일의 목적지(어디로 옮기라고 했는지)도 함께 추출하세요.
-        
-        <과일 리스트>사과, 배, 바나나, 오렌지, pos1, pos2, pos3<출력 형식>
-        다음 형식을 반드시 따르세요: [과일1 과일2 ... / pos1 pos2 ...]
-        과일과 위치는 각각 공백으로 구분과일이 없으면 앞쪽은 공백 없이 비우고, 목적지가 없으면 '/' 뒤는 공백 없이 비웁니다.
-        과일과 목적지의 순서는 등장 순서를 따릅니다.
-        
-        <특수 규칙>명확한 과일 명칭이 없지만 문맥상 유추 가능한 경우(예: "길쭉하고 노란 과일" → 바나나, "아침에 먹는 빨간 과일" → 사과)는 리스트 내 항목으로 최대한 추론해 반환하세요.
-        다수의 과일과 목적지가 동시에 등장할 경우 각각에 대해 정확히 매칭하여 순서대로 출력하세요.
+        당신은 가정용 서비스 로봇의 행동을 제어하는 '작업 지시자(Task Planner)'입니다.
+        사용자의 자연어 명령을 분석하여, 로봇이 순서대로 실행할 수 있는 JSON 배열 형태의 '동작 시퀀스'로 변환해야 합니다.
 
-        <예시>입력: "사과를 pos1에 가져다 놔" 출력: 사과 / pos1입력: "왼쪽에 있는 배와 오렌지를 pos1에 넣어줘" 출력: 배 오렌지 / pos1입력: "오른쪽에 있는 바나나를 줘" 출력: 바나나 /입력: "길쭉하고 노란 거랑 사과를 pos2에 둬" 출력: 바나나 사과 / pos2입력: "배는 pos2에 두고 오렌지는 pos1에 둬" 출력: 배 오렌지 / pos2 pos1
-        
-        "<사용자 입력>"{user_input}"
+        <가용 자원 (현재 로봇이 인식/조작할 수 있는 한계)>
+        - 조작 가능한 객체(Targets): "사과", "배", "바나나"
+        - 수행 가능한 동작(Actions): 
+          1. "pick" (객체를 집어 올림)
+          2. "place" (객체를 내려놓음)
+          3. "shake" (현재 잡고 있는 객체를 흔듦)
+          4. "flip" (현재 잡고 있는 객체를 뒤집음)
+
+        <작성 규칙>
+        1. 출력은 반드시 JSON 배열(Array) 형식이어야 합니다.
+        2. 배열의 각 요소는 "action"과 "params" 키를 가져야 합니다.
+        3. "params" 내부에는 대상 객체를 지정하는 "target" 키가 들어갑니다. (단, 대상이 명확하지 않거나 이전 동작과 이어지는 경우 생략 가능)
+        4. JSON 데이터 외에 어떠한 설명, 마크다운 코드 블록(```json 등), 인삿말도 출력하지 마세요. 오직 JSON 텍스트만 반환해야 파서가 고장 나지 않습니다.
+
+        <예시 시나리오>
+        입력: "사과 잡아서 흔들어줘" 
+        출력: [{{"action": "pick", "params": {{"target": "사과"}}}}, {{"action": "shake", "params": {{}}}}]
+
+        입력: "배를 뒤집어서 바나나 옆에 놔둬" 
+        출력: [{{"action": "pick", "params": {{"target": "배"}}}}, {{"action": "flip", "params": {{}}}}, {{"action": "place", "params": {{"target": "바나나"}}}}]
+
+        입력: "사과랑 바나나 둘 다 흔들어봐"
+        출력: [{{"action": "pick", "params": {{"target": "사과"}}}}, {{"action": "shake", "params": {{}}}}, {{"action": "place", "params": {{"target": "사과"}}}}, {{"action": "pick", "params": {{"target": "바나나"}}}}, {{"action": "shake", "params": {{}}}}, {{"action": "place", "params": {{"target": "바나나"}}}}]
+
+        <사용자 명령>
+        "{user_input}"
         """
 
         self.prompt_template = PromptTemplate(
@@ -65,7 +77,6 @@ class GetKeyword(Node):
         self.lang_chain = self.prompt_template | self.llm
         # self.lang_chain = LLMChain(llm=self.llm, prompt=self.prompt_template)
         self.stt = STT(openai_api_key=openai_api_key)
-
 
         super().__init__("get_keyword_node")
         # 오디오 설정
