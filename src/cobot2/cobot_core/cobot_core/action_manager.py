@@ -75,7 +75,7 @@ class ActionManager():
         methods = ['movel', 'movej', 'wait', 'reset', 
                    'gripper_open', 'gripper_close', 'gripper_open_little',
                    'compliance_on', 'compliance_off', 'set_desired_force',
-                   'periodic', 'clear_alarm']
+                   'periodic', 'clear_alarm','amovej','amovel', 'movesx', 'movesj']
         
         for m in methods:
             # getattr(obj, name): 객체에서 속성 가져오기
