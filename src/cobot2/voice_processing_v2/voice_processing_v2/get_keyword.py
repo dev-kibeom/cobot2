@@ -1,15 +1,18 @@
-# ros2 service call /get_keyword od_msg/srv/SrvVoiceCmd "{}"
+# 토픽:
+#   /voice_command  (std_msgs/String)  - cobot_core/executer 가 받는 평면 JSON 시퀀스
+#   /voice_reply    (std_msgs/String)  - 사용자에게 들려줄 자연어 reply
 
 import json
 import os
+import threading
 import time
 
 import rclpy
 from langchain.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 from rclpy.node import Node
+from std_msgs.msg import String
 
-from od_msg.srv import SrvVoiceCmd
 from voice_processing_v2.MicController import MicConfig, MicController
 from voice_processing_v2.stt import STT
 from voice_processing_v2.wakeup_word import WakeupWord
@@ -137,83 +140,101 @@ class GetKeyword(Node):
         self.mic_controller = MicController(config=mic_config)
         self.wakeup_word = WakeupWord(buffer_size=mic_config.buffer_size)
 
-        self.get_logger().info("MicRecorderNode initialized.")
-        self.get_logger().info("wait for client's request...")
-        self.get_keyword_srv = self.create_service(
-            SrvVoiceCmd, "get_keyword", self.get_keyword
-        )
+        self.command_pub = self.create_publisher(String, "/voice_command", 10)
+        self.reply_pub = self.create_publisher(String, "/voice_reply", 10)
+
+        self.get_logger().info("get_keyword_node initialized.")
+        self.get_logger().info("listening for wakeup word in background...")
+        self.listen_thread = threading.Thread(target=self._listen_loop, daemon=True)
+        self.listen_thread.start()
+
+    def _listen_loop(self):
+        while rclpy.ok():
+            try:
+                self.mic_controller.open_stream()
+                self.wakeup_word.set_stream(self.mic_controller.stream)
+            except OSError as e:
+                self.get_logger().error(f"mic stream error: {e}, retry in 3s")
+                time.sleep(3)
+                continue
+
+            self.get_logger().info("waiting for wakeup word...")
+            while rclpy.ok() and not self.wakeup_word.is_wakeup():
+                time.sleep(0.01)
+            if not rclpy.ok():
+                break
+
+            self.get_logger().info("wakeup detected, recording...")
+            try:
+                self.mic_controller.record_audio()
+                wav_data = self.mic_controller.get_wav_data()
+                self.mic_controller.close_stream()
+            except Exception as e:
+                self.get_logger().error(f"record error: {e}")
+                self.mic_controller.close_stream()
+                continue
+
+            try:
+                output_message = self.stt.speech2text(wav_data)
+                self.get_logger().info(f"STT: {output_message}")
+
+                sequence, reply = self.extract_keyword(output_message)
+                self.get_logger().warn(f"sequence: {sequence}")
+                self.get_logger().warn(f"reply: {reply}")
+
+                cobot_seq = self._to_cobot_core_sequence(sequence)
+                self.command_pub.publish(
+                    String(data=json.dumps(cobot_seq, ensure_ascii=False))
+                )
+                self.reply_pub.publish(String(data=reply))
+                self.get_logger().info("published /voice_command + /voice_reply")
+            except json.JSONDecodeError as e:
+                self.get_logger().error(f"LLM JSON parse error: {e}")
+                self.reply_pub.publish(String(data="LLM 응답 파싱 실패"))
+            except Exception as e:
+                self.get_logger().error(f"unexpected: {e}")
+                self.reply_pub.publish(String(data=f"error: {e}"))
 
     def extract_keyword(self, output_message):
         response = self.lang_chain.invoke({"user_input": output_message})
         result = json.loads(response.content)
-
         sequence = result.get("sequence", [])
         reply = str(result.get("reply", ""))
-
-        print(f"sequence: {sequence}")
-        print(f"reply   : {reply}")
-
         return sequence, reply
 
-    def get_keyword(self, request, response):
-        try:
-            print("open stream")
-            self.mic_controller.open_stream()
-            self.wakeup_word.set_stream(self.mic_controller.stream)
-
-            while rclpy.ok() and not self.wakeup_word.is_wakeup():
-                time.sleep(0.01)
-
-            self.mic_controller.record_audio()
-            wav_data = self.mic_controller.get_wav_data()
-            self.mic_controller.close_stream()
-
-            output_message = self.stt.speech2text(wav_data)
-            self.get_logger().info(f"STT result: {output_message}")
-
-            sequence, reply = self.extract_keyword(output_message)
-            self.get_logger().warn(f"Generated sequence: {sequence}")
-            self.get_logger().warn(f"Reply: {reply}")
-
-            response.success = True
-            response.sequence_json = json.dumps(sequence, ensure_ascii=False)
-            response.error = ""
-            response.reply = reply
-            return response
-
-        except OSError as e:
-            self.get_logger().error("Error: Failed to open audio stream")
-            self.get_logger().error("please check your device index")
-            self.mic_controller.close_stream()
-            response.success = False
-            response.sequence_json = "[]"
-            response.error = "audio_device_error"
-            response.reply = f"audio device error: {e}"
-            return response
-        except json.JSONDecodeError as e:
-            self.get_logger().error(f"LLM JSON parse error: {e}")
-            self.mic_controller.close_stream()
-            response.success = False
-            response.sequence_json = "[]"
-            response.error = "llm_parse_error"
-            response.reply = "LLM 응답 파싱 실패"
-            return response
-        except Exception as e:
-            self.get_logger().error(f"unexpected error: {e}")
-            self.mic_controller.close_stream()
-            response.success = False
-            response.sequence_json = "[]"
-            response.error = "internal_error"
-            response.reply = f"error: {e}"
-            return response
+    def _to_cobot_core_sequence(self, sequence):
+        """
+        프롬프트가 만드는 형식 -> cobot_core/executer 가 받는 평면 형식.
+          [{"step":1,"action":"pick","params":{"object":"사과"}}, ...]
+            ↓
+          [{"action":"pick","params":{"target":"사과"}}, ...]
+        - step 키 제거
+        - params.object / params.location -> params.target 로 통일
+        """
+        out = []
+        for step in sequence:
+            action = step.get("action")
+            params = step.get("params", {}) or {}
+            if "object" in params:
+                normalized = {"target": params["object"]}
+            elif "location" in params:
+                normalized = {"target": params["location"]}
+            else:
+                normalized = dict(params)
+            out.append({"action": action, "params": normalized})
+        return out
 
 
 def main():
     rclpy.init()
     node = GetKeyword()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

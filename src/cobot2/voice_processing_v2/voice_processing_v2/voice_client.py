@@ -1,16 +1,15 @@
 # 사용 예: ros2 run voice_processing_v2 voice_client
-# tts
+# /voice_command (JSON 시퀀스) 와 /voice_reply (자연어) 토픽을 구독하고
+# reply 를 OpenAI TTS 로 재생.
 
 import os
 import subprocess
 import tempfile
-import time
 
 import rclpy
 from openai import OpenAI
 from rclpy.node import Node
-
-from od_msg.srv import SrvVoiceCmd
+from std_msgs.msg import String
 
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
@@ -53,21 +52,28 @@ def speak(text: str, voice: str = "onyx", model: str = "tts-1"):
             except Exception:
                 pass
 
+
 class VoiceClient(Node):
     def __init__(self):
         super().__init__("voice_client_node")
 
-        self.client = self.create_client(SrvVoiceCmd, "get_keyword")
-        while not self.client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info("waiting for /get_keyword service...")
+        self.create_subscription(String, "/voice_command", self._on_command, 10)
+        self.create_subscription(String, "/voice_reply", self._on_reply, 10)
 
-        self.get_logger().info("voice_client connected to /get_keyword.")
+        self.get_logger().info(
+            "voice_client subscribed to /voice_command, /voice_reply"
+        )
 
-    def request_voice(self):
-        request = SrvVoiceCmd.Request()
-        future = self.client.call_async(request)
-        rclpy.spin_until_future_complete(self, future)
-        return future.result()
+    def _on_command(self, msg: String):
+        print("=" * 50)
+        print(f"  /voice_command : {msg.data}")
+        print("=" * 50)
+
+    def _on_reply(self, msg: String):
+        text = msg.data
+        print(f"  /voice_reply   : {text}")
+        speak(text)
+
 
 def main():
     rclpy.init()
@@ -76,30 +82,7 @@ def main():
     print("\n=== voice_client started (자동 반복 모드, Ctrl+C로 종료) ===\n")
 
     try:
-        while rclpy.ok():
-            print("[대기] 'wassup homie' 호출어를 외쳐주세요...\n")
-
-            response = node.request_voice()
-            if response is None:
-                node.get_logger().error("no response from /get_keyword")
-                continue
-
-            if not response.success:
-                node.get_logger().warn(
-                    f"failed (error={response.error}): {response.reply}"
-                )
-                speak(response.reply)
-                continue
-
-            print("=" * 50)
-            print(f"  sequence: {response.sequence_json}")
-            print(f"  error   : {response.error or '(none)'}")
-            print(f"  reply   : {response.reply}")
-            print("=" * 50 + "\n")
-
-            speak(response.reply)
-            time.sleep(0.5)
-
+        rclpy.spin(node)
     except (KeyboardInterrupt, EOFError):
         print("\n종료합니다.")
     finally:
