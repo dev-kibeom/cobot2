@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import sys
@@ -7,8 +8,7 @@ import rclpy
 from rclpy.node import Node
 import DR_init
 
-from od_msg.srv import SrvDepthPosition
-from std_srvs.srv import Trigger
+from od_msg.srv import SrvDepthPosition, SrvVoiceCmd
 from ament_index_python.packages import get_package_share_directory
 from robot_control.onrobot import RG
 
@@ -19,7 +19,8 @@ package_path = get_package_share_directory("robot_control")
 ROBOT_ID = "dsr01"
 ROBOT_MODEL = "m0609"
 VELOCITY, ACC = 60, 60
-# BUCKET_POS = [445.5, -242.6, 174.4, 156.4, 180.0, -112.5]
+# 쓰레기통 위치 (실측값으로 교체 필요)
+TRASH_POS = [445.5, -242.6, 174.4, 156.4, 180.0, -112.5]
 GRIPPER_NAME = "rg2"
 TOOLCHARGER_IP = "192.168.1.1"
 TOOLCHARGER_PORT = "502"
@@ -60,10 +61,18 @@ class RobotController(Node):
             self.get_logger().info("Waiting for get_depth_position service...")
         self.get_position_request = SrvDepthPosition.Request()
 
-        self.get_keyword_client = self.create_client(Trigger, "/get_keyword")
+        self.get_keyword_client = self.create_client(SrvVoiceCmd, "/get_keyword")
         while not self.get_keyword_client.wait_for_service(timeout_sec=3.0):
             self.get_logger().info("Waiting for get_keyword service...")
-        self.get_keyword_request = Trigger.Request()
+        self.get_keyword_request = SrvVoiceCmd.Request()
+
+        self.action_handlers = {
+            "pick": self.action_pick,
+            "goto_trash": self.action_goto_trash,
+            "gripper_open": self.action_gripper_open,
+            "gripper_close": self.action_gripper_close,
+            "home": self.action_home,
+        }
 
     def get_robot_pose_matrix(self, x, y, z, rx, ry, rz):
         R = Rotation.from_euler("ZYZ", [rx, ry, rz], degrees=True).as_matrix()
@@ -90,28 +99,87 @@ class RobotController(Node):
         return td_coord[:3]
 
     def robot_control(self):
-        target_list = []
         self.get_logger().info("call get_keyword service")
-        self.get_logger().info("say 'Hello Rokey' and speak what you want to pick up")
+        self.get_logger().info("say 'wassup homie' and speak what you want to do")
         get_keyword_future = self.get_keyword_client.call_async(self.get_keyword_request)
         rclpy.spin_until_future_complete(self, get_keyword_future)
-        if get_keyword_future.result().success:
-            get_keyword_result = get_keyword_future.result()
 
-            target_list = get_keyword_result.message.split()
-
-            for target in target_list:
-                target_pos = self.get_target_pos(target)
-                if target_pos is None:
-                    self.get_logger().warn("No target position")
-                else:
-                    self.get_logger().info(f"target position: {target_pos}")
-                    self.pick_and_place_target(target_pos)
-                    self.init_robot()
-
-        else:
-            self.get_logger().warn(f"{get_keyword_result.message}")
+        result = get_keyword_future.result()
+        if result is None:
+            self.get_logger().error("get_keyword call returned no result")
             return
+
+        if not result.success:
+            self.get_logger().warn(
+                f"get_keyword failed (error={result.error}): {result.reply}"
+            )
+            return
+
+        try:
+            sequence = json.loads(result.sequence_json) if result.sequence_json else []
+        except json.JSONDecodeError as e:
+            self.get_logger().error(f"sequence_json parse error: {e}")
+            return
+
+        if not sequence:
+            self.get_logger().warn(f"empty sequence: {result.reply}")
+            return
+
+        self.get_logger().info(f"reply: {result.reply}")
+        self.get_logger().info(f"sequence: {sequence}")
+        self.run_sequence(sequence)
+
+    def run_sequence(self, sequence):
+        for step in sequence:
+            action = step.get("action")
+            params = step.get("params", {}) or {}
+            self.get_logger().info(f"-> action={action} params={params}")
+
+            handler = self.action_handlers.get(action)
+            if handler is None:
+                self.get_logger().error(f"unknown action: {action}")
+                return
+            try:
+                handler(params)
+            except Exception as e:
+                self.get_logger().error(f"action '{action}' failed: {e}")
+                return
+
+    # ---- action handlers ----
+
+    def action_pick(self, params):
+        target = params.get("target")
+        if not target:
+            self.get_logger().warn("pick: missing target param")
+            return
+        target_pos = self.get_target_pos(target)
+        if target_pos is None:
+            self.get_logger().warn(f"pick: no target position for '{target}'")
+            return
+        self.get_logger().info(f"pick: target position: {target_pos}")
+        movel(target_pos, vel=VELOCITY, acc=ACC)
+        mwait()
+        gripper.close_gripper()
+        while gripper.get_status()[0]:
+            time.sleep(0.5)
+        mwait()
+
+    def action_goto_trash(self, _params):
+        movel(TRASH_POS, vel=VELOCITY, acc=ACC)
+        mwait()
+
+    def action_gripper_open(self, _params):
+        gripper.open_gripper()
+        while gripper.get_status()[0]:
+            time.sleep(0.5)
+
+    def action_gripper_close(self, _params):
+        gripper.close_gripper()
+        while gripper.get_status()[0]:
+            time.sleep(0.5)
+
+    def action_home(self, _params):
+        self.init_robot()
 
     def get_target_pos(self, target):
         self.get_position_request.target = target

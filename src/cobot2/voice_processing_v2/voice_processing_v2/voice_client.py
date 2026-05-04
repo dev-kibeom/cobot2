@@ -85,14 +85,16 @@ def main():
                 continue
 
             if not response.success:
-                node.get_logger().warn(f"failed: {response.reply}")
+                node.get_logger().warn(
+                    f"failed (error={response.error}): {response.reply}"
+                )
                 speak(response.reply)
                 continue
 
             print("=" * 50)
-            print(f"  objects: {list(response.objects)}")
-            print(f"  targets: {list(response.targets)}")
-            print(f"  reply  : {response.reply}")
+            print(f"  sequence: {response.sequence_json}")
+            print(f"  error   : {response.error or '(none)'}")
+            print(f"  reply   : {response.reply}")
             print("=" * 50 + "\n")
 
             speak(response.reply)
