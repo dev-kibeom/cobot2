@@ -23,7 +23,7 @@ if not openai_api_key:
 _openai_client = OpenAI(api_key=openai_api_key)
 
 
-def speak(text: str, voice: str = "nova", model: str = "tts-1"):
+def speak(text: str, voice: str = "onyx", model: str = "tts-1"):
     """OpenAI TTS로 텍스트를 음성 합성 후 mpg123으로 재생."""
     if not text:
         return
@@ -77,7 +77,7 @@ def main():
 
     try:
         while rclpy.ok():
-            print("[대기] '헬로 로키' 호출어를 외쳐주세요...\n")
+            print("[대기] 'wassup homie' 호출어를 외쳐주세요...\n")
 
             response = node.request_voice()
             if response is None:
