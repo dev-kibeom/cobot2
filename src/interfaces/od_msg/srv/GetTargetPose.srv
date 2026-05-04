@@ -1,0 +1,7 @@
+# Request (요청)
+string target_name   # 예: "사과", "바나나"
+---
+# Response (응답)
+bool success         # 탐지 성공 여부
+float64[3] position  # Base 좌표계 기준 [x, y, z] 좌표
+string message       # 에러나 상태 메시지 (예: "타겟이 시야에 없습니다")

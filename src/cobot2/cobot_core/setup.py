@@ -1,8 +1,10 @@
+# cobot_core/setup.py
+
 import os
 from glob import glob
 from setuptools import find_packages, setup
 
-package_name = 'voice_processing'
+package_name = 'cobot_core'
 
 setup(
     name=package_name,
@@ -12,13 +14,14 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'resource'), glob('resource/*.tflite')),
+        # 추가: resource 폴더 내의 모든 파일(.npy 등)을 빌드 후 share 경로로 복사
+        (os.path.join('share', package_name, 'resource'), glob('resource/*')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='rokey',
-    maintainer_email='rokey@todo.todo',
-    description='TODO: Package description',
+    maintainer='kibeom',
+    maintainer_email='neopkrrl@gmail.com',
+    description='Core control package for Cobot2 (State, Executer, Skill Orchestrator)',
     license='TODO: License declaration',
     extras_require={
         'test': [
@@ -27,7 +30,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'voice_to_command = voice_processing.voice_to_command:main',
+            'state_manager = cobot_core.state_manager:main',
+            'executer = cobot_core.executer:main',
+            'skill_orchestrator = cobot_core.skill_orchestrator:main',
         ],
     },
 )

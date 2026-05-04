@@ -4,7 +4,7 @@ from rclpy.node import Node
 from typing import Any, Callable, Optional, Tuple
 
 from ament_index_python.packages import get_package_share_directory
-from od_msg.srv import SrvDepthPosition
+from od_msg.srv import GetTargetPose
 from object_detection.realsense import ImgNode
 from object_detection.yolo import YoloModel
 
@@ -22,11 +22,12 @@ class ObjectDetectionNode(Node):
             self.img_node.get_camera_intrinsic, "camera intrinsics"
         )
         self.create_service(
-            SrvDepthPosition,
-            'get_3d_position',
+            GetTargetPose,
+            '/get_3d_position',
             self.handle_get_depth
         )
-        self.get_logger().info("ObjectDetectionNode initialized.")
+
+        self.get_logger().info("👁️ Vision AI Node initialized (JIT Mode).")
 
     def _load_model(self, name):
         """모델 이름에 따라 인스턴스를 반환합니다."""
@@ -35,10 +36,25 @@ class ObjectDetectionNode(Node):
         raise ValueError(f"Unsupported model: {name}")
 
     def handle_get_depth(self, request, response):
-        """클라이언트 요청을 처리해 3D 좌표를 반환합니다."""
-        self.get_logger().info(f"Received request: {request}")
-        coords = self._compute_position(request.target)
-        response.depth_position = [float(x) for x in coords]
+        """클라이언트(ActionManager)의 JIT 요청을 처리해 3D 좌표를 반환합니다."""
+        
+        target_name = request.target_name
+        self.get_logger().info(f"🔍 탐지 요청 수신: '{target_name}'")
+
+        coords = self._compute_position(target_name)
+
+        # 응답(success, position, message) 작성
+        if coords != (0.0, 0.0, 0.0):
+            response.success = True
+            response.position = [float(x) for x in coords]
+            response.message = "Detection successful"
+            self.get_logger().info(f"✅ 탐지 성공! 카메라 좌표: {response.position}")
+        else:
+            response.success = False
+            response.position = [0.0, 0.0, 0.0]
+            response.message = f"Failed to detect '{target_name}'"
+            self.get_logger().warn(f"❌ 탐지 실패: '{target_name}'")
+
         return response
 
     def _compute_position(self, target):
@@ -53,8 +69,9 @@ class ObjectDetectionNode(Node):
         self.get_logger().info(f"Detection: box={box}, score={score}")
         cx, cy = map(int, [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2])
         cz = self._get_depth(cx, cy)
-        if cz is None:
-            self.get_logger().warn("Depth out of range.")
+
+        if cz is None or cz <= 0:
+            self.get_logger().warn("Depth out of range or invalid.")
             return 0.0, 0.0, 0.0
 
         return self._pixel_to_camera_coords(cx, cy, cz)
