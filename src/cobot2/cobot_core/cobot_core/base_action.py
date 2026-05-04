@@ -346,12 +346,12 @@ class BaseAction:
             
         path = [posj(joint) for joint in joints]
         res = movesj(            
-                                path,            
-                                vel=v,            
-                                acc=a,            
-                                time=time,            
-                                mod=mode,        
-                                )
+                    path,            
+                    vel=v,            
+                    acc=a,            
+                    time=time,            
+                    mod=mode,        
+                    )
         if res != 0:            
             print(f"⚠️ movesj 예외사항 발생!: {res}")            
             return False
