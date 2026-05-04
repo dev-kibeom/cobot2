@@ -75,6 +75,7 @@ class BaseAction:
 
     def periodic(self, amp, period, repeat):
         from DSR_ROBOT2 import move_periodic, DR_BASE
+
         res = move_periodic(amp=amp, period=period, repeat=repeat, ref=DR_BASE)
         
         if res != 0:

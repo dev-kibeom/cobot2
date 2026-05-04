@@ -13,26 +13,15 @@ class TestVoiceCommand(Node):
     def publish_test_sequence(self):
         sequence = [
             {
-                "action": "movesx",
-                "params": {
-                    "poses": [
-                        [-150, -50, 0, 0, 0, 0], 
-                        [90, 50, 0, 0, 0, 0], 
-                        [-150, 50, 0, 0, 0, 0], 
-                        [300, -50, 0, 0, 0, 0]
-                    ],
-                    "vel": 100,
-                    "acc": 100,
-                    "mode": "rel",
-                },
-                "desc": "1",
+                "action": "reset",
+                "params": {},
+                "desc": "reset",
             },
             {
-                "action": "wait",
+                "action": "shake",
                 "params": {
-                    "time": 3.0,
                 },
-                "desc": "2",
+                "desc": "1",
             },
             {
                 "action": "reset",
