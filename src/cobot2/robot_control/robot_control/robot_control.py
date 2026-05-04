@@ -68,10 +68,7 @@ class RobotController(Node):
 
         self.action_handlers = {
             "pick": self.action_pick,
-            "goto_trash": self.action_goto_trash,
-            "gripper_open": self.action_gripper_open,
-            "gripper_close": self.action_gripper_close,
-            "home": self.action_home,
+            "place": self.action_place,
         }
 
     def get_robot_pose_matrix(self, x, y, z, rx, ry, rz):
@@ -133,7 +130,8 @@ class RobotController(Node):
         for step in sequence:
             action = step.get("action")
             params = step.get("params", {}) or {}
-            self.get_logger().info(f"-> action={action} params={params}")
+            step_no = step.get("step")
+            self.get_logger().info(f"-> step={step_no} action={action} params={params}")
 
             handler = self.action_handlers.get(action)
             if handler is None:
@@ -148,13 +146,13 @@ class RobotController(Node):
     # ---- action handlers ----
 
     def action_pick(self, params):
-        target = params.get("target")
-        if not target:
-            self.get_logger().warn("pick: missing target param")
+        obj = params.get("object")
+        if not obj:
+            self.get_logger().warn("pick: missing object param")
             return
-        target_pos = self.get_target_pos(target)
+        target_pos = self.get_target_pos(obj)
         if target_pos is None:
-            self.get_logger().warn(f"pick: no target position for '{target}'")
+            self.get_logger().warn(f"pick: no target position for '{obj}'")
             return
         self.get_logger().info(f"pick: target position: {target_pos}")
         movel(target_pos, vel=VELOCITY, acc=ACC)
@@ -164,22 +162,18 @@ class RobotController(Node):
             time.sleep(0.5)
         mwait()
 
-    def action_goto_trash(self, _params):
-        movel(TRASH_POS, vel=VELOCITY, acc=ACC)
-        mwait()
-
-    def action_gripper_open(self, _params):
-        gripper.open_gripper()
-        while gripper.get_status()[0]:
-            time.sleep(0.5)
-
-    def action_gripper_close(self, _params):
-        gripper.close_gripper()
-        while gripper.get_status()[0]:
-            time.sleep(0.5)
-
-    def action_home(self, _params):
-        self.init_robot()
+    def action_place(self, params):
+        location = params.get("location")
+        if location == "쓰레기통":
+            movel(TRASH_POS, vel=VELOCITY, acc=ACC)
+            mwait()
+            gripper.open_gripper()
+            while gripper.get_status()[0]:
+                time.sleep(0.5)
+        elif location == "홈":
+            self.init_robot()
+        else:
+            self.get_logger().warn(f"place: unsupported location '{location}'")
 
     def get_target_pos(self, target):
         self.get_position_request.target = target

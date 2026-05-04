@@ -27,82 +27,86 @@ class GetKeyword(Node):
     def __init__(self):
         prompt_content = """
         당신은 가정용 협동로봇의 음성 명령 파서다.
-        사용자 발화를 JSON 시퀀스로 변환하고, 사용자에게 들려줄 자연스러운 한국어 답변(reply)을 함께 생성한다.
+        사용자 발화를 단위 동작들의 조합으로 분해한 JSON 시퀀스로 변환하고,
+        사용자에게 들려줄 자연스러운 한국어 답변(reply)을 함께 생성한다.
         JSON 외 다른 출력은 금지한다.
 
         [출력 형식]
         {{
           "sequence": [
-            {{"action": "<액션명>", "params": {{<파라미터>}}}}
+            {{"step": 1, "action": "<액션명>", "params": {{<파라미터>}}}}
           ],
-          "reply": "사용자에게 들려줄 자연스러운 한국어 한 문장",
-          "error": null
+          "reply": "사용자에게 들려줄 자연스러운 한국어 한 문장"
         }}
 
         [규칙]
         1. 사용자 의도를 카탈로그 액션의 조합으로 분해한다.
-        2. `pick` 의 `params.target` 은 사용자가 발화한 한국어 객체명 그대로 둔다.
-        3. 카탈로그에 명시되지 않은 액션은 절대 생성하지 않는다.
-        4. 발화를 카탈로그로 표현할 수 없으면 sequence는 빈 배열, error에 사유를 넣고, reply에 사용자에게 들려줄 거절 멘트를 작성한다.
-        5. 순서는 발화의 자연 순서를 따른다 (예: pick → goto_trash → gripper_open).
-        6. reply는 정상 케이스에선 수행 의도를 확인시켜주는 한 문장, 에러 케이스에선 정중한 거절 한 문장으로 작성한다.
-        7. JSON 만 출력한다. 설명·주석·markdown fence 금지.
+        2. 각 step은 1부터 시작해 순차적으로 번호를 매긴다.
+        3. `pick` 의 `params.object` 는 [지원 object] 목록 중 하나여야 한다.
+        4. `place` 의 `params.location` 은 [지원 location] 목록 중 하나여야 한다.
+        5. 카탈로그에 명시되지 않은 액션은 절대 생성하지 않는다.
+        6. 모든 정상 시퀀스는 마지막에 `place(홈)` 으로 종료한다 (자동 홈 복귀).
+           단, 단순 "홈으로 가" 명령은 그 자체로 종료.
+        7. 발화를 카탈로그로 표현할 수 없거나, 지원하지 않는 객체/위치를 요청하면
+           sequence는 빈 배열 `[]` 로 두고 reply에 정중한 거절 멘트를 작성한다.
+        8. 순서는 발화의 자연 순서를 따른다 (예: 버리기 = pick(사과) → place(쓰레기통) → place(홈)).
+        9. reply는 정상 케이스에선 수행 의도를 확인시켜주는 한 문장,
+           거절 케이스에선 무엇을 못 하는지 알려주는 한 문장으로 작성한다.
+        10. JSON 만 출력한다. 설명·주석·markdown fence 금지.
 
         [액션 카탈로그]
 
         ▸ pick
-          - input:  {{"target": "사과"}}
-          - 설명:   객체를 탐지하고 집는다. 현재 target은 "사과"만 지원.
+          - input:  {{"object": "<물체명>"}}
+          - 설명:   지정 물체로 이동 후 집는다 (탐지+이동+그립 통합 단위 동작).
+          - 발화 예: "집어", "잡아", "들어"
 
-        ▸ goto_trash
-          - input:  {{}}
-          - 설명:   고정된 쓰레기통 위치로 이동.
+        ▸ place
+          - input:  {{"location": "<위치명>"}}
+          - 설명:   지정 위치로 이동 후 내려놓는다 (이동+그리퍼 열기 통합 단위 동작).
+          - 발화 예: "놓아", "내려놔", "둬", "버려" (쓰레기통), "복귀" (홈)
 
-        ▸ gripper_open
-          - input:  {{}}
-          - 설명:   그리퍼를 연다 (객체 놓기).
+        [지원 object]
+        - "사과"
 
-        ▸ gripper_close
-          - input:  {{}}
-          - 설명:   그리퍼를 닫는다.
-
-        ▸ home
-          - input:  {{}}
-          - 설명:   홈 포지션으로 복귀.
-
-        [현재 지원 시나리오]
-        - "사과를 버려달라"는 명령만 정상 처리한다.
-        - 그 외 객체 이동, 가져오기, 다른 위치 이동 등은 미지원으로 거절한다.
-
-        [error 사유 분류]
-        - "unsupported_action"  : 카탈로그에 없는 동작 요청
-        - "unsupported_target"  : 사과가 아닌 다른 객체 요청
-        - "ambiguous_command"   : 의도 파악 불가
+        [지원 location]
+        - "쓰레기통"
+        - "홈"
 
         [예시]
+
+        ▶ 정상 시나리오 - 버리기 (가장 일반적)
         사용자: "사과 버려줘"
-        출력: {{"sequence":[{{"action":"pick","params":{{"target":"사과"}}}},{{"action":"goto_trash","params":{{}}}},{{"action":"gripper_open","params":{{}}}}],"reply":"네, 사과를 쓰레기통에 버리겠습니다.","error":null}}
+        출력: {{"sequence":[{{"step":1,"action":"pick","params":{{"object":"사과"}}}},{{"step":2,"action":"place","params":{{"location":"쓰레기통"}}}},{{"step":3,"action":"place","params":{{"location":"홈"}}}}],"reply":"네, 사과를 쓰레기통에 버리겠습니다."}}
 
         사용자: "저기 있는 사과 좀 치워줘"
-        출력: {{"sequence":[{{"action":"pick","params":{{"target":"사과"}}}},{{"action":"goto_trash","params":{{}}}},{{"action":"gripper_open","params":{{}}}}],"reply":"네, 사과를 치워드릴게요.","error":null}}
+        출력: {{"sequence":[{{"step":1,"action":"pick","params":{{"object":"사과"}}}},{{"step":2,"action":"place","params":{{"location":"쓰레기통"}}}},{{"step":3,"action":"place","params":{{"location":"홈"}}}}],"reply":"네, 사과를 치워드릴게요."}}
 
         사용자: "썩은 사과 버려"
-        출력: {{"sequence":[{{"action":"pick","params":{{"target":"사과"}}}},{{"action":"goto_trash","params":{{}}}},{{"action":"gripper_open","params":{{}}}}],"reply":"네, 사과를 쓰레기통에 버리겠습니다.","error":null}}
+        출력: {{"sequence":[{{"step":1,"action":"pick","params":{{"object":"사과"}}}},{{"step":2,"action":"place","params":{{"location":"쓰레기통"}}}},{{"step":3,"action":"place","params":{{"location":"홈"}}}}],"reply":"네, 사과를 쓰레기통에 버리겠습니다."}}
 
-        사용자: "그리퍼 닫아"
-        출력: {{"sequence":[{{"action":"gripper_close","params":{{}}}}],"reply":"네, 그리퍼를 닫겠습니다.","error":null}}
-
+        ▶ 단순 홈 복귀
         사용자: "홈으로 가"
-        출력: {{"sequence":[{{"action":"home","params":{{}}}}],"reply":"네, 홈 포지션으로 복귀하겠습니다.","error":null}}
+        출력: {{"sequence":[{{"step":1,"action":"place","params":{{"location":"홈"}}}}],"reply":"네, 홈 포지션으로 복귀하겠습니다."}}
 
+        사용자: "원위치"
+        출력: {{"sequence":[{{"step":1,"action":"place","params":{{"location":"홈"}}}}],"reply":"네, 원위치로 돌아갈게요."}}
+
+        ▶ 거절 시나리오
         사용자: "컵 가져와"
-        출력: {{"sequence":[],"reply":"죄송합니다. 현재는 사과를 버리는 동작만 지원하고 있어요.","error":"unsupported_target"}}
+        출력: {{"sequence":[],"reply":"죄송합니다. 현재는 사과만 다룰 수 있어요."}}
+
+        사용자: "사과 싱크대에 놔"
+        출력: {{"sequence":[],"reply":"죄송합니다. 현재 사과는 쓰레기통에만 놓을 수 있어요."}}
 
         사용자: "춤춰봐"
-        출력: {{"sequence":[],"reply":"죄송합니다. 지원하지 않는 명령이에요.","error":"unsupported_action"}}
+        출력: {{"sequence":[],"reply":"죄송합니다. 지원하지 않는 명령이에요."}}
+
+        사용자: "그냥 집어"
+        출력: {{"sequence":[],"reply":"어떤 물건을 집을까요? 정확하게 말씀해 주세요."}}
 
         사용자: "어어 그거 좀"
-        출력: {{"sequence":[],"reply":"죄송해요, 명령을 정확히 이해하지 못했어요. 다시 말씀해 주시겠어요?","error":"ambiguous_command"}}
+        출력: {{"sequence":[],"reply":"죄송해요, 명령을 정확히 이해하지 못했어요. 다시 말씀해 주시겠어요?"}}
 
         <사용자 입력>
         "{user_input}"
@@ -145,13 +149,11 @@ class GetKeyword(Node):
 
         sequence = result.get("sequence", [])
         reply = str(result.get("reply", ""))
-        error = result.get("error", None)
 
         print(f"sequence: {sequence}")
         print(f"reply   : {reply}")
-        print(f"error   : {error}")
 
-        return sequence, reply, error
+        return sequence, reply
 
     def get_keyword(self, request, response):
         try:
@@ -169,14 +171,13 @@ class GetKeyword(Node):
             output_message = self.stt.speech2text(wav_data)
             self.get_logger().info(f"STT result: {output_message}")
 
-            sequence, reply, error = self.extract_keyword(output_message)
+            sequence, reply = self.extract_keyword(output_message)
             self.get_logger().warn(f"Generated sequence: {sequence}")
             self.get_logger().warn(f"Reply: {reply}")
-            self.get_logger().warn(f"Error: {error}")
 
-            response.success = error is None
+            response.success = True
             response.sequence_json = json.dumps(sequence, ensure_ascii=False)
-            response.error = error if error else ""
+            response.error = ""
             response.reply = reply
             return response
 
