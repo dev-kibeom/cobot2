@@ -4,7 +4,7 @@ import numpy as np
 import rclpy
 import importlib
 import pkgutil
-import core.actions as actions
+import cobot_core.actions as actions
 
 from ament_index_python.packages import get_package_share_directory
 from .base_action import BaseAction
@@ -87,7 +87,7 @@ class ActionManager():
         """actions 폴더 내의 모든 액션들을 자동으로 등록"""
         # 파일 임포트
         for _, name, _ in pkgutil.iter_modules(actions.__path__):
-            full_module_name = f"core.actions.{name}"
+            full_module_name = f"cobot_core.actions.{name}"
             importlib.import_module(full_module_name)
         
         # 액션 등록
@@ -98,22 +98,23 @@ class ActionManager():
             self._action_map[action_name] = cls(self)
             self.node.get_logger().info(f"Action Registered: {action_name}")
 
-    def get_robot_pose_matirx(self, x, y, z, rx, ry, rz):
-        """현재 로봇의 위치(관절)를 4x4 변환 행렬로 변환"""
-        rx, ry, rz = math.radians(rx), math.radians(ry), math.radians(rz)
+    def get_robot_pose_matrix(self, x, y, z, a, b, c):
+        """Doosan API 기준인 Z-Y-Z 오일러 각도 회전 행렬 적용"""
+        a, b, c = math.radians(a), math.radians(b), math.radians(c)
 
-        Rx = np.array([[1, 0, 0], [0, math.cos(rx), -math.sin(rx)], [0, math.sin(rx), math.cos(rx)]])
-        Ry = np.array([[math.cos(ry), 0, math.sin(ry)], [0, 1, 0], [-math.sin(ry), 0, math.cos(ry)]])
-        Rz = np.array([[math.cos(rz), -math.sin(rz), 0], [math.sin(rz), math.cos(rz), 0], [0, 0, 1]])
+        # Z-Y-Z 회전 행렬
+        Rz1 = np.array([[math.cos(a), -math.sin(a), 0], [math.sin(a), math.cos(a), 0], [0, 0, 1]])
+        Ry  = np.array([[math.cos(b), 0, math.sin(b)], [0, 1, 0], [-math.sin(b), 0, math.cos(b)]])
+        Rz2 = np.array([[math.cos(c), -math.sin(c), 0], [math.sin(c), math.cos(c), 0], [0, 0, 1]])
 
-        R = Rz @ Ry @ Rx
+        R = Rz1 @ Ry @ Rz2
         T = np.eye(4)
         T[:3, :3] = R
         T[0, 3], T[1, 3], T[2, 3] = x, y, z
         return T
     
     def transform_to_base(self, camera_coords):
-        """카메라 좌표계를 로봇 Base 좌표계로 변환하고 35mm 오프셋 적용"""
+        """카메라 좌표계를 로봇 Base 좌표계(순수 절대 좌표)로 변환"""
         try:
             from DSR_ROBOT2 import get_current_posx, DR_BASE
             robot_posx = get_current_posx(DR_BASE)[0]  # 현재 로봇의 [x, y, z, rx, ry, rz]
@@ -130,14 +131,14 @@ class ActionManager():
         # 1. Base 좌표로 변환
         target_base_coord = np.dot(base2cam, coord)[:3]
         
-        # 2. 그리퍼의 현재 Z축(접근 벡터)을 추출하여 오프셋 적용
-        approach_vector = base2gripper[:3, 2]
-        target_base_coord += approach_vector * DEPTH_OFFSET
-        
-        # 3. 충돌 방지
-        target_base_coord[2] = max(target_base_coord[2], MIN_DEPTH)
+        # 2. 바닥 충돌 방지 최소 높이(Z) 보정
+        target_base_coord[2] = max(target_base_coord[2], 20.0)
 
-        return target_base_coord.tolist()
+        # 3. 6자유도 리스트로 반환 (손목 각도는 현재 상태 유지)
+        result_pos = target_base_coord.tolist()
+        result_pos.extend([rx, ry, rz])
+
+        return result_pos
         
     def get_vision_target(self, target_name):
         """ Action 모듈이 타겟의 최신 3D 좌표를 원할 때 호출"""

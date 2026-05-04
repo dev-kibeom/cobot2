@@ -8,13 +8,14 @@ from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.executors import MultiThreadedExecutor
 
 from command.action import Command
-from core.action_manager import ActionManager
+from cobot_core.action_manager import ActionManager
 
 # 로봇 설정 상수 (필요에 따라 수정)
 ROBOT_ID = "dsr01"
 ROBOT_MODEL = "m0609"
 ROBOT_TOOL = "Tool Weight"
 ROBOT_TCP = "GripperDA_v1"
+# ROBOT_IP = "192.168.1.100"
 
 # DR_init 설정
 DR_init.__dsr__id = ROBOT_ID
@@ -67,7 +68,7 @@ class CommandExecuter(Node):
     self.get_logger().warn("🛑 Cancel Request Received!")
     return CancelResponse.ACCEPT
   
-  async def execute_callback(self, goal_handle):
+  def execute_callback(self, goal_handle):
     """독립된 스레드에서 실제 로봇 동작 수행"""
     sequence = json.loads(goal_handle.request.command)
     result = Command.Result()
@@ -98,8 +99,8 @@ class CommandExecuter(Node):
       if not success:
         try:
           from DSR_ROBOT2 import get_current_posx, DR_BASE
-          curr_pos = get_current_posx(DR_BASE)
-          pos_str = f" [멈춘 좌표: X:{curr_pos[0]:.1f}, Y:{curr_pos[1]:.1f}, Z:{curr_pos[2]:.1f}]"
+          pos_list = get_current_posx(DR_BASE)[0] 
+          pos_str = f" [멈춘 좌표: X:{pos_list[0]:.1f}, Y:{pos_list[1]:.1f}, Z:{pos_list[2]:.1f}]"
         except Exception as e:
           print(f"좌표 캡처 실패: {e}")
           pos_str = ""
@@ -121,7 +122,7 @@ def main(args=None):
     
     DR_init.__dsr__id = ROBOT_ID
     DR_init.__dsr__model = ROBOT_MODEL
-    
+
     # DSR 내부 통신을 전담할 더미헬퍼 노드
     dsr_node = Node('dsr_helper_node', namespace=ROBOT_ID)
     DR_init.__dsr__node = dsr_node
