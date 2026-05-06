@@ -18,7 +18,7 @@ class TestVoiceCommand(Node):
                 "desc": "reset",
             },
             {
-                "action": "shake",
+                "action": "pick_horizontal",
                 "params": {
                 },
                 "desc": "1",
