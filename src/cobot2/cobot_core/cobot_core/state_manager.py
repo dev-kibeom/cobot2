@@ -64,7 +64,7 @@ class StateManager(Node):
         if is_recovery:
             self.get_logger().info("🚑 에러 복구를 위한 동작 명령 하달!")
         else:
-            self.get_logger().info("🚀 요리 동작 명령 하달!")
+            self.get_logger().info("🚀 시퀀스 동작 명령 하달!")
             
         self._send_goal_future = self._action_client.send_goal_async(
             goal_msg, feedback_callback=self.feedback_callback)
@@ -101,7 +101,7 @@ class StateManager(Node):
             if self.state == "RECOVERING_RESET":
                 self.get_logger().info("✅ 에러 복구(원점 회귀) 성공. 관리자 점검 후 다시 시작해 주세요.")
             else:
-                self.get_logger().info(f"🎉 요리 완료: {result.message}")
+                self.get_logger().info(f"🎉 시퀀스 완료: {result.message}")
             
             self.state = "IDLE"
             self.retry_count = 0
