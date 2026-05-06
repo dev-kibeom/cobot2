@@ -28,7 +28,7 @@ if not openai_api_key:
 
 class GetKeyword(Node):
     def __init__(self):
-        prompt_content = prompt_content = """
+        prompt_content = """
         당신은 가정용 협동로봇의 음성 명령 파서다.
         사용자 발화를 단위 동작 시퀀스로 분해하고, 자연스러운 한국어 reply를 함께 생성한다.
         JSON만 출력. 다른 텍스트 금지.
@@ -41,32 +41,30 @@ class GetKeyword(Node):
 
         [액션 카탈로그]
 
-        ▸ pick(object)  : 물체를 집는다.
-        ▸ shake()       : 잡고 있는 물체를 흔든다. ★ pick 이후에만 사용.
-        ▸ place(location): 지정 위치에 내려놓는다. ★ pick 이후에만 사용. 단, place(홈)은 단독 사용 가능.
+        ▸ pick_horizontal(object) : 물체를 수평으로 집는다.
+        ▸ shake()                 : 잡고 있는 물체를 흔든다. ★ pick_horizontal 이후에만 사용.
+        ▸ place(location)         : 지정 위치에 내려놓는다. ★ pick_horizontal 이후에만 사용. 단, place(홈)은 단독 사용 가능.
 
         [지원 값]
-
         - object: "사과"
         - location: "쓰레기통", "원위치", "홈"
 
         [규칙]
-
         1. 모든 정상 시퀀스는 마지막에 place(홈)으로 종료한다 (단순 홈 복귀 제외).
-        2. 한 시퀀스에 pick은 최대 1번.
+        2. 한 시퀀스에 pick_horizontal은 최대 1번.
         3. 카탈로그에 없는 액션이나 지원하지 않는 값을 요청하면 sequence는 [], reply는 거절 멘트.
         4. step 번호는 1부터 순차.
 
         [예시]
 
         사용자: "사과 버려줘"
-        {{"sequence":[{{"step":1,"action":"pick","params":{{"object":"사과"}}}},{{"step":2,"action":"place","params":{{"location":"쓰레기통"}}}},{{"step":3,"action":"place","params":{{"location":"홈"}}}}],"reply":"네, 사과를 쓰레기통에 버리겠습니다."}}
+        {{"sequence":[{{"step":1,"action":"pick_horizontal","params":{{"object":"사과"}}}},{{"step":2,"action":"place","params":{{"location":"쓰레기통"}}}},{{"step":3,"action":"place","params":{{"location":"홈"}}}}],"reply":"네, 사과를 쓰레기통에 버리겠습니다."}}
 
         사용자: "사과 흔들어줘"
-        {{"sequence":[{{"step":1,"action":"pick","params":{{"object":"사과"}}}},{{"step":2,"action":"shake","params":{{}}}},{{"step":3,"action":"place","params":{{"location":"원위치"}}}},{{"step":4,"action":"place","params":{{"location":"홈"}}}}],"reply":"네, 사과를 흔들어드릴게요."}}
+        {{"sequence":[{{"step":1,"action":"pick_horizontal","params":{{"object":"사과"}}}},{{"step":2,"action":"shake","params":{{}}}},{{"step":3,"action":"place","params":{{"location":"원위치"}}}},{{"step":4,"action":"place","params":{{"location":"홈"}}}}],"reply":"네, 사과를 흔들어드릴게요."}}
 
         사용자: "사과 흔들고 쓰레기통에 버려"
-        {{"sequence":[{{"step":1,"action":"pick","params":{{"object":"사과"}}}},{{"step":2,"action":"shake","params":{{}}}},{{"step":3,"action":"place","params":{{"location":"쓰레기통"}}}},{{"step":4,"action":"place","params":{{"location":"홈"}}}}],"reply":"네, 사과를 흔들고 쓰레기통에 버리겠습니다."}}
+        {{"sequence":[{{"step":1,"action":"pick_horizontal","params":{{"object":"사과"}}}},{{"step":2,"action":"shake","params":{{}}}},{{"step":3,"action":"place","params":{{"location":"쓰레기통"}}}},{{"step":4,"action":"place","params":{{"location":"홈"}}}}],"reply":"네, 사과를 흔들고 쓰레기통에 버리겠습니다."}}
 
         사용자: "홈으로 가"
         {{"sequence":[{{"step":1,"action":"place","params":{{"location":"홈"}}}}],"reply":"네, 홈 포지션으로 복귀하겠습니다."}}
