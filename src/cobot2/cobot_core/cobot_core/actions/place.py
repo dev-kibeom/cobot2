@@ -8,7 +8,7 @@ class Place(BaseAction):
             print("❌ 타겟이 지정되지 않았습니다.")
             return False
         
-        # 👁️ 비전 탐색: "타겟"의 픽업용 3D 좌표 (기존 height의 오프셋 설정은 action_manager의 DEPTH_OFFSET 참고)
+        # 👁️ 비전 탐색: "타겟"의 픽업용 3D 좌표
         pos = self.manager.get_vision_target(target)
         if not pos: 
             return False

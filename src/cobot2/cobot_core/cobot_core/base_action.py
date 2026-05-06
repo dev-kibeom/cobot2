@@ -75,6 +75,7 @@ class BaseAction:
 
     def periodic(self, amp, period, repeat):
         from DSR_ROBOT2 import move_periodic, DR_BASE
+
         res = move_periodic(amp=amp, period=period, repeat=repeat, ref=DR_BASE)
         
         if res != 0:
@@ -179,8 +180,7 @@ class BaseAction:
         if res != 0:
             print(f"⚠️ 예외사항 발생!: {res}")
             return False
-        
-        self.gripper_open()        
+        self.gripper_open()
         return True
     
     def clear_alarm(self):
@@ -259,4 +259,146 @@ class BaseAction:
         """wait(0)을 자주 쓰므로 편의를 위해 래핑"""
         from DSR_ROBOT2 import wait
         return wait(time)
-    
+
+# =======================================================================
+
+    def amovej(self, joint, vel=None, acc=None, time=0, mode='rel'):        
+        v = vel if vel is not None else self.vel_angular        
+        a = acc if acc is not None else self.acc_angular
+        
+        from DSR_ROBOT2 import amovej        
+        from DSR_ROBOT2 import DR_MV_MOD_ABS, DR_MV_MOD_REL        
+        from DSR_ROBOT2 import posj
+        
+        if mode == 'abs':            
+            mode = DR_MV_MOD_ABS        
+        elif mode == 'rel':            
+            mode = DR_MV_MOD_REL        
+        else:            
+            print("❌ 잘못된 move 모드!")            
+            return False
+        
+        joint = posj(joint)
+        
+        res = amovej(
+                    joint,
+                    vel=v,
+                    acc=a,
+                    time=time,
+                    mod=mode,
+                    )
+                    
+        if res != 0:            
+            print(f"⚠️ amovej 예외사항 발생!: {res}")            
+            return False
+        return True
+
+# =======================================================================
+
+    def amovel(self, pos, vel=None, acc=None, time=0, mode='abs'):
+        v = vel if vel is not None else self.vel_linear
+        a = acc if acc is not None else self.acc_linear
+
+        from DSR_ROBOT2 import amovel
+        from DSR_ROBOT2 import DR_MV_MOD_ABS, DR_MV_MOD_REL, DR_BASE, DR_TOOL
+        from DSR_ROBOT2 import posx
+
+        if mode == 'abs':
+            mode = DR_MV_MOD_ABS
+        elif mode == 'rel':
+            mode = DR_MV_MOD_REL
+        else:
+            print("❌ 잘못된 move 모드!")
+            return False
+
+        pos = posx(pos)
+
+        res = amovel(
+            pos,
+            vel=v,
+            acc=a,
+            time=time,
+            mod=mode,
+        )
+
+        if res != 0:
+            print(f"⚠️ amovel 예외사항 발생!: {res}")
+            return False
+
+        return True
+
+# =======================================================================
+
+    def movesj(self, joints, vel=None, acc=None, time=0, mode='abs'):
+        v = vel if vel is not None else self.vel_angular        
+        a = acc if acc is not None else self.acc_angular
+        
+        from DSR_ROBOT2 import movesj        
+        from DSR_ROBOT2 import DR_MV_MOD_ABS, DR_MV_MOD_REL        
+        from DSR_ROBOT2 import posj
+
+        if mode == 'abs':            
+            mode = DR_MV_MOD_ABS        
+        elif mode == 'rel':            
+            mode = DR_MV_MOD_REL        
+        else:            
+            print("❌ 잘못된 move 모드!")            
+            return False
+            
+        path = [posj(joint) for joint in joints]
+        res = movesj(            
+                    path,            
+                    vel=v,            
+                    acc=a,            
+                    time=time,            
+                    mod=mode,        
+                    )
+        if res != 0:            
+            print(f"⚠️ movesj 예외사항 발생!: {res}")            
+            return False
+            
+        return True
+
+# =======================================================================
+
+    def movesx(self, poses, vel=None, acc=None, time=0, 
+								 mode='abs', ref='base'):        
+        v = vel if vel is not None else self.vel_linear        
+        a = acc if acc is not None else self.acc_linear
+            
+        from DSR_ROBOT2 import movesx        
+        from DSR_ROBOT2 import DR_MV_MOD_ABS, DR_MV_MOD_REL, DR_BASE, DR_TOOL        
+        from DSR_ROBOT2 import posx
+        
+        if mode == 'abs':
+            mode = DR_MV_MOD_ABS
+        elif mode == 'rel':
+            mode = DR_MV_MOD_REL
+        else:
+            print("❌ 잘못된 move 모드!")
+            return False
+        
+        if ref == 'base':
+            ref = DR_BASE
+        elif ref == 'tool':
+            ref = DR_TOOL
+        else:
+            print("❌ 잘못된 ref 모드!")
+            return False
+        
+        path = [posx(pos) for pos in poses]
+        
+        res = movesx(
+                    path,
+                    vel=v,
+                    acc=a,
+                    time=time,
+                    mod=mode,
+                    ref=ref,
+                    )
+                            
+        if res != 0:
+            print(f"⚠️ movesx 예외사항 발생!: {res}")
+            return False
+
+        return True

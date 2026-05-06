@@ -1,33 +1,32 @@
-# ros2 service call /get_keyword std_srvs/srv/Trigger "{}"
+# 토픽:
+#   /voice_command  (std_msgs/String)  - cobot_core/executer 가 받는 평면 JSON 시퀀스
+#   /voice_reply    (std_msgs/String)  - 사용자에게 들려줄 자연어 reply
 
 import json
 import os
-import time
-import rclpy
-import pyaudio
 import threading
+import time
 
+import rclpy
+from langchain.prompts import PromptTemplate
+from langchain_openai import ChatOpenAI
 from rclpy.node import Node
 from std_msgs.msg import String
 
-from ament_index_python.packages import get_package_share_directory
-from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
-from langchain.prompts import PromptTemplate
-
+from voice_processing.MicController import MicConfig, MicController
 from voice_processing.stt import STT
 from voice_processing.wakeup_word import WakeupWord
-from voice_processing.mic_controller import MicController, MicConfig
 
-############ Package Path & Environment Setting ############
-current_dir = os.getcwd()
-package_path = get_package_share_directory("voice_processing")
 
-is_laod = load_dotenv(dotenv_path=os.path.join(package_path, ".env"))
 openai_api_key = os.getenv("OPENAI_API_KEY")
+if not openai_api_key:
+    raise RuntimeError(
+        "OPENAI_API_KEY environment variable is not set. "
+        "Add `export OPENAI_API_KEY=...` to ~/.bashrc and run `source ~/.bashrc`."
+    )
 
 
-class VoiceToCommand(Node):
+class GetKeyword(Node):
     def __init__(self):
         super().__init__("get_keyword_node")
         
@@ -42,70 +41,99 @@ class VoiceToCommand(Node):
         )
 
         prompt_content = """
-        당신은 가정용 서비스 로봇의 행동을 제어하는 '작업 지시자(Task Planner)'입니다.
-        사용자의 자연어 명령을 분석하여, 로봇이 순서대로 실행할 수 있는 JSON 배열 형태의 '동작 시퀀스'로 변환해야 합니다.
+        당신은 가정용 협동로봇의 음성 명령 파서다.
+        사용자 발화를 단위 동작 시퀀스로 분해하고, 자연스러운 한국어 reply를 함께 생성한다.
+        JSON만 출력. 다른 텍스트 금지.
 
-        <가용 자원 (현재 로봇이 인식/조작할 수 있는 한계)>
-        - 조작 가능한 객체(Targets): "사과", "배", "바나나"
-        - 수행 가능한 동작(Actions): 
-          1. "pick" (객체를 집어 올림)
-          2. "place" (객체를 내려놓음)
-          3. "shake" (현재 잡고 있는 객체를 흔듦)
-          4. "flip" (현재 잡고 있는 객체를 뒤집음)
+        [출력 형식]
+        {{
+        "sequence": [{{"step": N, "action": "<액션>", "params": {{...}}}}],
+        "reply": "한 문장"
+        }}
 
-        <작성 규칙>
-        1. 출력은 반드시 JSON 배열(Array) 형식이어야 합니다.
-        2. 배열의 각 요소는 "action"과 "params" 키를 가져야 합니다.
-        3. "params" 내부에는 대상 객체를 지정하는 "target" 키가 들어갑니다. (단, 대상이 명확하지 않거나 이전 동작과 이어지는 경우 생략 가능)
-        4. JSON 데이터 외에 어떠한 설명, 마크다운 코드 블록(```json 등), 인삿말도 출력하지 마세요. 오직 JSON 텍스트만 반환해야 파서가 고장 나지 않습니다.
+        [액션 카탈로그]
 
-        <예시 시나리오>
-        입력: "사과 잡아서 흔들어줘" 
-        출력: [{{"action": "pick", "params": {{"target": "사과"}}}}, {{"action": "shake", "params": {{}}}}]
+        ▸ pick(object)   : 물체를 집는다.
+        ▸ shake()        : 잡고 있는 물체를 흔든다. ★ pick 이후에만 사용.
+        ▸ place(location): 지정 위치에 내려놓는다. ★ pick 이후에만 사용.
+        ▸ reset()        : 홈 포지션으로 복귀한다 (그리퍼 열림). 모든 정상 시퀀스의 종료 동작.
 
-        입력: "배를 뒤집어서 바나나 옆에 놔둬" 
-        출력: [{{"action": "pick", "params": {{"target": "배"}}}}, {{"action": "flip", "params": {{}}}}, {{"action": "place", "params": {{"target": "바나나"}}}}]
+        [지원 값]
 
-        입력: "사과랑 바나나 둘 다 흔들어봐"
-        출력: [{{"action": "pick", "params": {{"target": "사과"}}}}, {{"action": "shake", "params": {{}}}}, {{"action": "place", "params": {{"target": "사과"}}}}, {{"action": "pick", "params": {{"target": "바나나"}}}}, {{"action": "shake", "params": {{}}}}, {{"action": "place", "params": {{"target": "바나나"}}}}]
+        - object: "사과"
+        - location: "쓰레기통"
 
-        <사용자 명령>
+        [규칙]
+
+        1. 모든 정상 시퀀스는 마지막에 reset 으로 종료한다 (단순 홈 복귀 명령은 reset 단독).
+        2. 한 시퀀스에 pick은 최대 1번.
+        3. 카탈로그에 없는 액션이나 지원하지 않는 값을 요청하면 sequence는 [], reply는 거절 멘트.
+        4. step 번호는 1부터 순차.
+
+        [예시]
+
+        사용자: "사과 버려줘"
+        {{"sequence":[{{"step":1,"action":"pick","params":{{"object":"사과"}}}},{{"step":2,"action":"place","params":{{"location":"쓰레기통"}}}},{{"step":3,"action":"reset","params":{{}}}}],"reply":"네, 사과를 쓰레기통에 버리겠습니다."}}
+
+        사용자: "사과 흔들어줘"
+        {{"sequence":[{{"step":1,"action":"pick","params":{{"object":"사과"}}}},{{"step":2,"action":"shake","params":{{}}}},{{"step":3,"action":"reset","params":{{}}}}],"reply":"네, 사과를 흔들어드릴게요."}}
+
+        사용자: "사과 흔들고 쓰레기통에 버려"
+        {{"sequence":[{{"step":1,"action":"pick","params":{{"object":"사과"}}}},{{"step":2,"action":"shake","params":{{}}}},{{"step":3,"action":"place","params":{{"location":"쓰레기통"}}}},{{"step":4,"action":"reset","params":{{}}}}],"reply":"네, 사과를 흔들고 쓰레기통에 버리겠습니다."}}
+
+        사용자: "홈으로 가"
+        {{"sequence":[{{"step":1,"action":"reset","params":{{}}}}],"reply":"네, 홈 포지션으로 복귀하겠습니다."}}
+
+        사용자: "컵 가져와"
+        {{"sequence":[],"reply":"죄송합니다. 현재는 사과만 다룰 수 있어요."}}
+
+        사용자: "그냥 흔들어"
+        {{"sequence":[],"reply":"어떤 물건을 흔들까요?"}}
+
+        <사용자 입력>
         "{user_input}"
         """
 
+        self.llm = ChatOpenAI(
+            model="gpt-4o",
+            temperature=0.0,
+            openai_api_key=openai_api_key,
+            model_kwargs={"response_format": {"type": "json_object"}},
+        )
         self.prompt_template = PromptTemplate(
             input_variables=["user_input"], template=prompt_content
         )
         self.lang_chain = self.prompt_template | self.llm
-        # self.lang_chain = LLMChain(llm=self.llm, prompt=self.prompt_template)
         self.stt = STT(openai_api_key=openai_api_key)
 
-        # 오디오 설정
+        super().__init__("get_keyword_node")
+
         mic_config = MicConfig(
             chunk=12000,
             rate=48000,
             channels=1,
             record_seconds=5,
-            fmt=pyaudio.paInt16,
-            device_index=10,
+            device_index=None,
             buffer_size=24000,
         )
         self.mic_controller = MicController(config=mic_config)
-        self.wakeup_word = WakeupWord(mic_config.buffer_size)
+        self.wakeup_word = WakeupWord(buffer_size=mic_config.buffer_size)
 
-        # 블로킹 방지를 위한 리스닝 스레드 시작
-        self.get_logger().info("👂 Voice Processing Node가 백그라운드에서 듣기를 시작합니다...")
-        self.listen_thread = threading.Thread(target=self.continuous_listen, daemon=True)
+        self.command_pub = self.create_publisher(String, "/voice_command", 10)
+        self.reply_pub = self.create_publisher(String, "/voice_reply", 10)
+
+        self.get_logger().info("get_keyword_node initialized.")
+        self.get_logger().info("listening for wakeup word in background...")
+        self.listen_thread = threading.Thread(target=self._listen_loop, daemon=True)
         self.listen_thread.start()
 
-    def continuous_listen(self):
-        """wakeup word를 무한 대기하며 퍼블리싱"""
+    def _listen_loop(self):
         while rclpy.ok():
             try:
                 self.mic_controller.open_stream()
                 self.wakeup_word.set_stream(self.mic_controller.stream)
-            except OSError:
-                self.get_logger().error("마이크 스트림 에러. 3초 후 재시도합니다.")
+            except OSError as e:
+                self.get_logger().error(f"mic stream error: {e}, retry in 3s")
                 time.sleep(3)
                 continue
 
@@ -162,13 +190,11 @@ class VoiceToCommand(Node):
 
 def main():
     rclpy.init()
-    node = VoiceToCommand()
-    
+    node = GetKeyword()
     try:
-        # spin은 다른 노드 통신 처리를 위해 그대로 둠 (오디오 처리는 스레드가 담당)
         rclpy.spin(node)
     except KeyboardInterrupt:
-        node.get_logger().info("프로그램을 종료합니다.")
+        pass
     finally:
         node.destroy_node()
         rclpy.shutdown()

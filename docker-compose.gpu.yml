@@ -1,0 +1,8 @@
+    # 🚨 GPU 가속 패스스루 (nvidia-container-toolkit 설치 필요)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
