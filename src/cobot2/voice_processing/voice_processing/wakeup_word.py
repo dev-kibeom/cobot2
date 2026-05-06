@@ -10,23 +10,25 @@ MODEL_PATH = os.path.join(package_path, f"resource/{MODEL_NAME}")
 
 
 class WakeupWord:
+    THRESHOLD = 0.1
+
     def __init__(self, buffer_size):
         self.model = None
         self.model_name = MODEL_NAME.split(".", maxsplit=1)[0]
         self.stream = None
         self.buffer_size = buffer_size
+        self.last_confidence: float = 0.0
 
-    def is_wakeup(self):
+    def is_wakeup(self) -> bool:
         audio_chunk = np.frombuffer(
             self.stream.read(self.buffer_size, exception_on_overflow=False),
             dtype=np.int16,
         )
         audio_chunk = resample(audio_chunk, int(len(audio_chunk) * 16000 / 48000))
         outputs = self.model.predict(audio_chunk, threshold=0.1)
-        confidence = outputs[self.model_name]
-        print("confidence: ", confidence)
-        # Wakeword 탐지
-        if confidence > 0.3:
+        self.last_confidence = float(outputs[self.model_name])
+        print("confidence: ", self.last_confidence)
+        if self.last_confidence > self.THRESHOLD:
             print("Wakeword detected!")
             return True
         return False

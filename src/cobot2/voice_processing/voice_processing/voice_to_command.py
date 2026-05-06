@@ -1,5 +1,6 @@
 # ros2 service call /get_keyword std_srvs/srv/Trigger "{}"
 
+import json
 import os
 import time
 import rclpy
@@ -31,7 +32,9 @@ class VoiceToCommand(Node):
         super().__init__("get_keyword_node")
         
         # ====================== 노드 통신 ====================== #
-        self.command_pub = self.create_publisher(String, '/voice_command', 10)
+        self.command_pub = self.create_publisher(String, '/voice_command',   10)
+        self.wakeup_pub  = self.create_publisher(String, '/wakeup_status',   10)
+        self.stt_pub     = self.create_publisher(String, '/stt_result',      10)
         # ===================================================== #
         
         self.llm = ChatOpenAI(
@@ -107,38 +110,56 @@ class VoiceToCommand(Node):
                 continue
 
             self.get_logger().info("💤 'Hello Rokey' 웨이크업 워드 대기 중...")
-            
-            # wakeup_word 감지루프
-            while not self.wakeup_word.is_wakeup() and rclpy.ok():
-                pass
-            
+
+            # wakeup_word 감지 루프 — confidence 실시간 발행
+            while rclpy.ok():
+                detected = self.wakeup_word.is_wakeup()
+                self._publish_wakeup(detected)
+                if detected:
+                    break
+
             if not rclpy.ok():
                 break
-            
+
             self.get_logger().info("🌟 [웨이크업 감지] 네, 말씀하세요!")
             self.mic_controller.record_audio()
-            
+
             temp_wav_path = "/tmp/command.wav"
             self.mic_controller.save_wav(temp_wav_path)
-            
+
             # STT 수행 전에 자원 충돌방지를 위해 마이크 스트림 닫기
             self.mic_controller.close_stream()
-            
+
             self.get_logger().info("🧠 STT 및 LLM 분석 중...")
             output_message = self.stt.speech2text(temp_wav_path)
-            
+
+            stt_msg = String()
+            stt_msg.data = output_message
+            self.stt_pub.publish(stt_msg)
+
             # LLM 체인 실행
             response = self.lang_chain.invoke({"user_input": output_message})
             sequence_json = response.content.strip()
-            
+
             self.get_logger().warn(f"LLM 출력결과:\n{sequence_json}")
-            
-            # 추출된 JSON 시퀸스를 토픽으로 발행
+
+            # 추출된 JSON 시퀀스를 토픽으로 발행
             msg = String()
             msg.data = sequence_json
             self.command_pub.publish(msg)
             self.get_logger().info("✅ /voice_command 토픽으로 JSON 시퀀스 발행 완료!")
         
+    def _publish_wakeup(self, detected: bool):
+        msg = String()
+        msg.data = json.dumps({
+            'type':       'wakeup',
+            'wake_word':  'hello rokey',
+            'confidence': self.wakeup_word.last_confidence,
+            'detected':   detected,
+        }, ensure_ascii=False)
+        self.wakeup_pub.publish(msg)
+
+
 def main():
     rclpy.init()
     node = VoiceToCommand()
