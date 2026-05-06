@@ -26,7 +26,7 @@ class WakeupWord:
         confidence = outputs[self.model_name]
         print("confidence: ", confidence)
         # Wakeword 탐지
-        if confidence > 0.3:
+        if confidence > 0.01:
             print("Wakeword detected!")
             return True
         return False

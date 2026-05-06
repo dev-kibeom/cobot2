@@ -32,7 +32,6 @@ setup(
         'console_scripts': [
             'state_manager = cobot_core.state_manager:main',
             'executer = cobot_core.executer:main',
-            'skill_orchestrator = cobot_core.skill_orchestrator:main',
         ],
     },
 )
