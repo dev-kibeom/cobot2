@@ -260,6 +260,20 @@ class BaseAction:
         from DSR_ROBOT2 import wait
         return wait(time)
 
+    def get_current_posx(self):
+        from DSR_ROBOT2 import get_current_posx
+
+        pos, _ = get_current_posx()
+        print(pos)
+        return pos
+
+    def get_current_posj(self):
+        from DSR_ROBOT2 import get_current_posj
+
+        joint, _ = get_current_posj()
+        print(joint)
+        return joint
+
 # =======================================================================
 
     def amovej(self, joint, vel=None, acc=None, time=0, mode='rel'):        

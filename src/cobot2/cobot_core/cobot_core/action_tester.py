@@ -18,24 +18,34 @@ class TestVoiceCommand(Node):
                 "desc": "reset",
             },
             {
-                "action": "amovej",
+                "action": "pick_horizontal",
+                "params": {'target': "사과"},
+                "desc": "xx",
+            },
+            {
+                "action": "shake",
                 "params": {
-                        "joint": [0, 0, 0, 90, 0, 0],
-                        "vel": 100,
-                        "acc": 100,
-                        "mode": 'rel'
                     },
                 "desc": "1",
             },
+            # {
+            #     "action": "movel",
+            #     "params": {
+            #             "pos" : [311,250,285,90,90,90],
+            #             "vel": 100,
+            #             "acc": 100,
+            #             "mode" : 'abs'
+            #         }
+            # },
+            # {
+            #     "action": "gripper_close",
+            #     "params": {
+            #         }
+            # },
             {
-                "action": "movel",
-                "params": {
-                        "pos" : [150,0,0,0,0,0],
-                        "vel": 100,
-                        "acc": 100,
-                        "mode" : 'rel'
-                    }
-
+                "action": "reset",
+                "params": {},
+                "desc": "reset",
             }
         ]
 

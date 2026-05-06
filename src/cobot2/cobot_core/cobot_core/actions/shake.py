@@ -9,11 +9,11 @@ class Shake(BaseAction):
         # 이미 잡고있는 상태라 가정
         # if not self.manager.perform('gripper_close'): return False
         # 홈 위치 이동 후 'shake'
-        if not self.manager.perform('movesj', joints=[[0, 0, 90,0, 90, 0]], vel = 100, acc = 100, mode = 'abs'): return False
-        if not self.manager.perform('amovej', joint=([0,0,0,80,0,0]),vel=50, acc=50, mode='rel'): return False
-        if not self.manager.perform('movej', joint=([0,0,0,0,0,180])): return False
+
+        # if not self.manager.perform('amovej', joint=([0,0,0,80,0,0]),vel=50, acc=50, mode='rel'): return False
+
         if not self.manager.perform('periodic', amp=amp, period=period, repeat=repeat): return False
-        if not self.manager.perform('amovej', joint=([0,0,0,0,0,-180])): return False
-        if not self.manager.perform('movej', joint=([0,0,0,-80,0,0]),vel=50, acc=50, mode='rel'): return False
+
+        # if not self.manager.perform('movej', joint=([0,0,0,-80,0,0]),vel=50, acc=50, mode='rel'): return False
         
         return True
