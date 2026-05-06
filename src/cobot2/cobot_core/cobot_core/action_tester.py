@@ -18,16 +18,25 @@ class TestVoiceCommand(Node):
                 "desc": "reset",
             },
             {
-                "action": "pick_horizontal",
+                "action": "amovej",
                 "params": {
-                },
+                        "joint": [0, 0, 0, 90, 0, 0],
+                        "vel": 100,
+                        "acc": 100,
+                        "mode": 'rel'
+                    },
                 "desc": "1",
             },
             {
-                "action": "reset",
-                "params": {},
-                "desc": "reset",
-            },
+                "action": "movel",
+                "params": {
+                        "pos" : [150,0,0,0,0,0],
+                        "vel": 100,
+                        "acc": 100,
+                        "mode" : 'rel'
+                    }
+
+            }
         ]
 
         msg = String()

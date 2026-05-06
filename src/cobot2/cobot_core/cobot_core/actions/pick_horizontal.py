@@ -18,14 +18,14 @@ class Pick_horizontal(BaseAction):
         
         if not self.manager.perform('gripper_open'): return False
 
-        if not self.manager.perform('amovej', joint=([0,0,0,0,90,0]), vel = 100, acc = 50, mode = 'rel'): return False
+        if not self.manager.perform('amovej', joint=([0,0,0,90,0,0]), vel = 100, acc = 50, mode = 'rel'): return False
 
-        # 어프로치: 사과 바로 위(100mm)로 안전하게 이동
-        approach_pos = [tx, ty, tz + 100.0, rx, ry, rz]
+        # 어프로치: 사과 바로 위(50mm)로 안전하게 이동
+        approach_pos = [tx, ty, tz + 50.0, rx, ry, rz]
         if not self.manager.perform('movel', pos=approach_pos, mode='abs'): return False
         
         # 움켜쥐기 위해 하강: 표면 좌표보다 살짝 깊게 들어가서 꽉 쥠
-        grip_pos = [tx, ty, tz - 50.0, rx, ry, rz]
+        grip_pos = [tx, ty, tz - 150.0, rx, ry, rz]
         if not self.manager.perform('movel', pos=grip_pos, mode='abs'): return False
         
         # 잡기

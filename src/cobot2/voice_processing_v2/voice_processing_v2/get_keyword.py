@@ -43,14 +43,15 @@ class GetKeyword(Node):
 
         ▸ pick_horizontal(object) : 물체를 수평으로 집는다.
         ▸ shake()                 : 잡고 있는 물체를 흔든다. ★ pick_horizontal 이후에만 사용.
-        ▸ place(location)         : 지정 위치에 내려놓는다. ★ pick_horizontal 이후에만 사용. 단, place(홈)은 단독 사용 가능.
+        ▸ place(location)         : 지정 위치에 내려놓는다. ★ pick_horizontal 이후에만 사용.
+        ▸ reset()                 : 홈 포지션으로 복귀한다. 단독 사용 가능.
 
         [지원 값]
         - object: "사과"
-        - location: "쓰레기통", "원위치", "홈"
+        - location: "쓰레기통", "원위치"
 
         [규칙]
-        1. 모든 정상 시퀀스는 마지막에 place(홈)으로 종료한다 (단순 홈 복귀 제외).
+        1. 모든 정상 시퀀스는 마지막에 reset()으로 종료한다 (단순 홈 복귀는 reset() 단독).
         2. 한 시퀀스에 pick_horizontal은 최대 1번.
         3. 카탈로그에 없는 액션이나 지원하지 않는 값을 요청하면 sequence는 [], reply는 거절 멘트.
         4. step 번호는 1부터 순차.
@@ -58,16 +59,16 @@ class GetKeyword(Node):
         [예시]
 
         사용자: "사과 버려줘"
-        {{"sequence":[{{"step":1,"action":"pick_horizontal","params":{{"object":"사과"}}}},{{"step":2,"action":"place","params":{{"location":"쓰레기통"}}}},{{"step":3,"action":"place","params":{{"location":"홈"}}}}],"reply":"네, 사과를 쓰레기통에 버리겠습니다."}}
+        {{"sequence":[{{"step":1,"action":"pick_horizontal","params":{{"object":"사과"}}}},{{"step":2,"action":"place","params":{{"location":"쓰레기통"}}}},{{"step":3,"action":"reset","params":{{}}}}],"reply":"네, 사과를 쓰레기통에 버리겠습니다."}}
 
         사용자: "사과 흔들어줘"
-        {{"sequence":[{{"step":1,"action":"pick_horizontal","params":{{"object":"사과"}}}},{{"step":2,"action":"shake","params":{{}}}},{{"step":3,"action":"place","params":{{"location":"원위치"}}}},{{"step":4,"action":"place","params":{{"location":"홈"}}}}],"reply":"네, 사과를 흔들어드릴게요."}}
+        {{"sequence":[{{"step":1,"action":"pick_horizontal","params":{{"object":"사과"}}}},{{"step":2,"action":"shake","params":{{}}}},{{"step":3,"action":"place","params":{{"location":"원위치"}}}},{{"step":4,"action":"reset","params":{{}}}}],"reply":"네, 사과를 흔들어드릴게요."}}
 
         사용자: "사과 흔들고 쓰레기통에 버려"
-        {{"sequence":[{{"step":1,"action":"pick_horizontal","params":{{"object":"사과"}}}},{{"step":2,"action":"shake","params":{{}}}},{{"step":3,"action":"place","params":{{"location":"쓰레기통"}}}},{{"step":4,"action":"place","params":{{"location":"홈"}}}}],"reply":"네, 사과를 흔들고 쓰레기통에 버리겠습니다."}}
+        {{"sequence":[{{"step":1,"action":"pick_horizontal","params":{{"object":"사과"}}}},{{"step":2,"action":"shake","params":{{}}}},{{"step":3,"action":"place","params":{{"location":"쓰레기통"}}}},{{"step":4,"action":"reset","params":{{}}}}],"reply":"네, 사과를 흔들고 쓰레기통에 버리겠습니다."}}
 
         사용자: "홈으로 가"
-        {{"sequence":[{{"step":1,"action":"place","params":{{"location":"홈"}}}}],"reply":"네, 홈 포지션으로 복귀하겠습니다."}}
+        {{"sequence":[{{"step":1,"action":"reset","params":{{}}}}],"reply":"네, 홈 포지션으로 복귀하겠습니다."}}
 
         사용자: "컵 가져와"
         {{"sequence":[],"reply":"죄송합니다. 현재는 사과만 다룰 수 있어요."}}
