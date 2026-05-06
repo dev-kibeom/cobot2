@@ -28,7 +28,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'get_keyword = voice_processing.get_keyword:main',
+            'voice_to_command = voice_processing.voice_to_command:main',
             'voice_client = voice_processing.voice_client:main',
         ],
     },
