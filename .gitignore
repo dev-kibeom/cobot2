@@ -12,7 +12,6 @@ src/doosan-robot2/
 src/backup
 src/cobot1
 src/robo_chef
-src/cobot2/voice_processing_v2
 
 # ==========================================
 # Python (임시 및 캐시 파일)
