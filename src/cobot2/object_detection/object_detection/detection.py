@@ -1,5 +1,6 @@
-import numpy as np
+import cv2
 import rclpy
+import numpy as np
 from rclpy.node import Node
 from typing import Any, Callable, Optional, Tuple
 
@@ -106,6 +107,53 @@ class ObjectDetectionNode(Node):
             z
         )
 
+    def _compute_position(self, target):
+        """이미지를 처리해 객체의 카메라 좌표를 계산하고 화면에 출력합니다."""
+        rclpy.spin_once(self.img_node)
+
+        box, score = self.model.get_best_detection(self.img_node, target)
+        
+        # 화면 시각화를 위해 최신 컬러 프레임을 가져옵니다.
+        frame = self.img_node.get_color_frame()
+
+        if box is None or score is None:
+            self.get_logger().warn("No detection found.")
+            # 객체를 못 찾았더라도 현재 카메라는 계속 보여주도록 창을 갱신합니다.
+            if frame is not None:
+                cv2.imshow("Vision AI - Target Detection", frame)
+                cv2.waitKey(1)
+            return 0.0, 0.0, 0.0
+        
+        self.get_logger().info(f"Detection: box={box}, score={score}")
+        cx, cy = map(int, [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2])
+        
+        # ==========================================
+        # 🎨 OpenCV 시각화 그리기 영역
+        # ==========================================
+        if frame is not None:
+            # 1. 경계 박스 그리기 (파란색, 두께 2)
+            x1, y1, x2, y2 = map(int, box)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            
+            # 2. 중심점 타겟팅 그리기 (빨간색 점)
+            cv2.circle(frame, (cx, cy), 5, (0, 0, 255), -1)
+            
+            # 3. 객체 이름과 정확도(Score) 텍스트 쓰기
+            text = f"{target} ({score:.2f})"
+            cv2.putText(frame, text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+            
+            # 4. 윈도우 창에 이미지 출력
+            cv2.imshow("Vision AI - Target Detection", frame)
+            cv2.waitKey(1) # 화면을 갱신하기 위한 필수 대기 시간
+        # ==========================================
+
+        cz = self._get_depth(cx, cy)
+
+        if cz is None or cz <= 0:
+            self.get_logger().warn("Depth out of range or invalid.")
+            return 0.0, 0.0, 0.0
+
+        return self._pixel_to_camera_coords(cx, cy, cz)
 
 def main(args=None):
     rclpy.init(args=args)
