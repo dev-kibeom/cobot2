@@ -28,6 +28,18 @@ if not openai_api_key:
 
 class GetKeyword(Node):
     def __init__(self):
+        super().__init__("get_keyword_node")
+        
+        # ====================== 노드 통신 ====================== #
+        self.command_pub = self.create_publisher(String, '/voice_command',   10)
+        self.wakeup_pub  = self.create_publisher(String, '/wakeup_status',   10)
+        self.stt_pub     = self.create_publisher(String, '/stt_result',      10)
+        # ===================================================== #
+        
+        self.llm = ChatOpenAI(
+            model="gpt-4o", temperature=0.2, openai_api_key=openai_api_key
+        )
+
         prompt_content = """
         당신은 가정용 협동로봇의 음성 명령 파서다.
         사용자 발화를 단위 동작 시퀀스로 분해하고, 자연스러운 한국어 reply를 함께 생성한다.
@@ -125,71 +137,55 @@ class GetKeyword(Node):
                 time.sleep(3)
                 continue
 
-            self.get_logger().info("waiting for wakeup word...")
-            while rclpy.ok() and not self.wakeup_word.is_wakeup():
-                time.sleep(0.01)
+            self.get_logger().info("💤 'Hello Rokey' 웨이크업 워드 대기 중...")
+
+            # wakeup_word 감지 루프 — confidence 실시간 발행
+            while rclpy.ok():
+                detected = self.wakeup_word.is_wakeup()
+                self._publish_wakeup(detected)
+                if detected:
+                    break
+
             if not rclpy.ok():
                 break
 
-            self.get_logger().info("wakeup detected, recording...")
-            try:
-                self.mic_controller.record_audio()
-                wav_data = self.mic_controller.get_wav_data()
-                self.mic_controller.close_stream()
-            except Exception as e:
-                self.get_logger().error(f"record error: {e}")
-                self.mic_controller.close_stream()
-                continue
+            self.get_logger().info("🌟 [웨이크업 감지] 네, 말씀하세요!")
+            self.mic_controller.record_audio()
 
-            try:
-                output_message = self.stt.speech2text(wav_data)
-                self.get_logger().info(f"STT: {output_message}")
+            temp_wav_path = "/tmp/command.wav"
+            self.mic_controller.save_wav(temp_wav_path)
 
-                sequence, reply = self.extract_keyword(output_message)
-                self.get_logger().warn(f"sequence: {sequence}")
-                self.get_logger().warn(f"reply: {reply}")
+            # STT 수행 전에 자원 충돌방지를 위해 마이크 스트림 닫기
+            self.mic_controller.close_stream()
 
-                cobot_seq = self._to_cobot_core_sequence(sequence)
-                self.command_pub.publish(
-                    String(data=json.dumps(cobot_seq, ensure_ascii=False))
-                )
-                self.reply_pub.publish(String(data=reply))
-                self.get_logger().info("published /voice_command + /voice_reply")
-            except json.JSONDecodeError as e:
-                self.get_logger().error(f"LLM JSON parse error: {e}")
-                self.reply_pub.publish(String(data="LLM 응답 파싱 실패"))
-            except Exception as e:
-                self.get_logger().error(f"unexpected: {e}")
-                self.reply_pub.publish(String(data=f"error: {e}"))
+            self.get_logger().info("🧠 STT 및 LLM 분석 중...")
+            output_message = self.stt.speech2text(temp_wav_path)
 
-    def extract_keyword(self, output_message):
-        response = self.lang_chain.invoke({"user_input": output_message})
-        result = json.loads(response.content)
-        sequence = result.get("sequence", [])
-        reply = str(result.get("reply", ""))
-        return sequence, reply
+            stt_msg = String()
+            stt_msg.data = output_message
+            self.stt_pub.publish(stt_msg)
 
-    def _to_cobot_core_sequence(self, sequence):
-        """
-        프롬프트가 만드는 형식 -> cobot_core/executer 가 받는 평면 형식.
-          [{"step":1,"action":"pick","params":{"object":"사과"}}, ...]
-            ↓
-          [{"action":"pick","params":{"target":"사과"}}, ...]
-        - step 키 제거
-        - params.object / params.location -> params.target 로 통일
-        """
-        out = []
-        for step in sequence:
-            action = step.get("action")
-            params = step.get("params", {}) or {}
-            if "object" in params:
-                normalized = {"target": params["object"]}
-            elif "location" in params:
-                normalized = {"target": params["location"]}
-            else:
-                normalized = dict(params)
-            out.append({"action": action, "params": normalized})
-        return out
+            # LLM 체인 실행
+            response = self.lang_chain.invoke({"user_input": output_message})
+            sequence_json = response.content.strip()
+
+            self.get_logger().warn(f"LLM 출력결과:\n{sequence_json}")
+
+            # 추출된 JSON 시퀀스를 토픽으로 발행
+            msg = String()
+            msg.data = sequence_json
+            self.command_pub.publish(msg)
+            self.get_logger().info("✅ /voice_command 토픽으로 JSON 시퀀스 발행 완료!")
+        
+    def _publish_wakeup(self, detected: bool):
+        msg = String()
+        msg.data = json.dumps({
+            'type':       'wakeup',
+            'wake_word':  'hello rokey',
+            'confidence': self.wakeup_word.last_confidence,
+            'detected':   detected,
+        }, ensure_ascii=False)
+        self.wakeup_pub.publish(msg)
 
 
 def main():
