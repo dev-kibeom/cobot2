@@ -130,21 +130,21 @@ class ObjectDetectionNode(Node):
         # ==========================================
         # 🎨 OpenCV 시각화 그리기 영역
         # ==========================================
-        if frame is not None:
-            # 1. 경계 박스 그리기 (파란색, 두께 2)
-            x1, y1, x2, y2 = map(int, box)
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+        # if frame is not None:
+        #     # 1. 경계 박스 그리기 (파란색, 두께 2)
+        #     x1, y1, x2, y2 = map(int, box)
+        #     cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
             
-            # 2. 중심점 타겟팅 그리기 (빨간색 점)
-            cv2.circle(frame, (cx, cy), 5, (0, 0, 255), -1)
+        #     # 2. 중심점 타겟팅 그리기 (빨간색 점)
+        #     cv2.circle(frame, (cx, cy), 5, (0, 0, 255), -1)
             
-            # 3. 객체 이름과 정확도(Score) 텍스트 쓰기
-            text = f"{target} ({score:.2f})"
-            cv2.putText(frame, text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+        #     # 3. 객체 이름과 정확도(Score) 텍스트 쓰기
+        #     text = f"{target} ({score:.2f})"
+        #     cv2.putText(frame, text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
             
-            # 4. 윈도우 창에 이미지 출력
-            cv2.imshow("Vision AI - Target Detection", frame)
-            cv2.waitKey(1) # 화면을 갱신하기 위한 필수 대기 시간
+        #     # 4. 윈도우 창에 이미지 출력
+        #     cv2.imshow("Vision AI - Target Detection", frame)
+        #     cv2.waitKey(1) # 화면을 갱신하기 위한 필수 대기 시간
         # ==========================================
 
         cz = self._get_depth(cx, cy)

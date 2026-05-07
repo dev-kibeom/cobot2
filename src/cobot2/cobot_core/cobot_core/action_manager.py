@@ -57,7 +57,7 @@ class ActionManager():
             try:
                 result = execute_func(**kwargs)
             except Exception as e:
-                print(f"🐍 [PYTHON ERROR] {action_name} 파라미터 또는 문법 오류: {e}")
+                self.node.get_logger().error(f"🐍 [PYTHON ERROR] {action_name} 파라미터 또는 문법 오류: {e}")
                 self.handle_critical_error(action_name) # 에러 시에도 무조건 compliance_off 실행!
                 return False
             
@@ -79,7 +79,8 @@ class ActionManager():
                    'gripper_open', 'gripper_close', 'gripper_open_little',
                    'compliance_on', 'compliance_off', 'set_desired_force',
                    'periodic','amovej','amovel', 'movesx', 'movesj',
-                   'get_current_posx','get_current_posj','clear_alarm']
+                   'get_current_posx','get_current_posj',
+                   'clear_alarm', 'stop']
         
         for m in methods:
             # getattr(obj, name): 객체에서 속성 가져오기
