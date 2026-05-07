@@ -33,13 +33,29 @@ class StateManager(Node):
         
     def recipe_callback(self, msg):
         """파서로부터 레시피 받았을 때의 처리"""
+        
+        # [테스트 편의 기능] 사용자가 새 명령을 내리면 '강제 초기화' 후 새 명령 수용 ==================
+        if self.state in ["RECOVERING_FAIL", "ERROR", "ADMIN_INTERVENTION"]:
+            self.get_logger().info("🔓 에러 상태에서 새 명령을 수신하여 시스템 잠금을 자동 해제합니다.")
+            self.state = "IDLE"
+            self.publish_status(error_msg="") # 에러 메시지 초기화
+        # =================================================================================
+        
         if self.state != "IDLE":
             self.get_logger().warn(f"⚠️ 현재 로봇이 '{self.state}' 상태입니다. 새 레시피를 무시합니다.")
             return
         
         try:
-            self.current_sequence = json.loads(msg.data)
-            self.get_logger().info(f"📥 {len(self.current_sequence)}단계의 레시피 수신. 실행을 준비합니다.")
+            parsed_data = json.loads(msg.data)
+            
+            # 🚨 LLM 응답에서 'sequence' 리스트만 정확히 추출
+            if isinstance(parsed_data, dict) and "sequence" in parsed_data:
+                self.current_sequence = parsed_data["sequence"]
+            elif isinstance(parsed_data, list):
+                self.current_sequence = parsed_data
+            else:
+                self.get_logger().error("❌ JSON 데이터에서 'sequence' 리스트를 찾을 수 없습니다.")
+                return
             
             # 새 레시피 수신 시 초기화
             self.retry_count = 0
@@ -59,7 +75,13 @@ class StateManager(Node):
         goal_msg.command = json.dumps(sequence, ensure_ascii=False)
         
         self.get_logger().info("⏳ Executer 연결 대기 중...")
-        self._action_client.wait_for_server()
+        
+        # 무한 대기 방지! Executer가 죽어있으면 3초 뒤에 포기하고 IDLE로 돌아감
+        if not self._action_client.wait_for_server(timeout_sec=3.0):
+            self.get_logger().error("❌ Executer 서버가 응답하지 않습니다! (Executer 노드가 죽었는지 확인하세요)")
+            self.state = "ERROR"
+            self.publish_status(error_msg="Executer 응답 없음")
+            return
         
         if is_recovery:
             self.get_logger().info("🚑 에러 복구를 위한 동작 명령 하달!")

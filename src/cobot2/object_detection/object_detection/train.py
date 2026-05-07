@@ -1,4 +1,5 @@
 import os
+import json
 import shutil
 from datetime import datetime
 from ultralytics import YOLO
@@ -33,21 +34,48 @@ def train_and_update_model():
         close_mosaic=10     # 마지막 10에포크는 순정 데이터로 -> 정확도 향상
     )
     
-    # 3. 이번 학습의 결과물 원본 경로 확인
-    source_weight = f"{model.trainer.save_dir}/weights/best.pt"
-    
-    # 4. ROS 2 패키지 리소스 폴더로 복사
-    target_dir = os.path.expanduser('~/cobot_ws/src/object_detection/resource/')
+    # 2. 경로 설정
+    save_dir = model.trainer.save_dir
+    target_dir = os.path.expanduser('~/cobot_ws/src/cobot2/object_detection/resource/')
     os.makedirs(target_dir, exist_ok=True)
     
     time_str = datetime.now().strftime("%Y%m%d_%H%M")
-    new_filename = f"best_{time_str}.pt"
-    target_weight = os.path.join(target_dir, new_filename)
     
-    shutil.copy(source_weight, target_weight)
+    # 3. class_name.json 생성 
+    # 모델이 학습하며 스스로 정립한 클래스 번호와 이름을 그대로 추출합니다.
+    class_map = model.model.names
+    json_path = os.path.join(target_dir, 'class_name.json')
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(class_map, f, ensure_ascii=False, indent=4)
+    print(f"📄 클래스 맵 저장 완료: {json_path}")
+
+    # 4. 모델 가중치 복사[cite: 13]
+    source_weight = os.path.join(save_dir, "weights", "best.pt")
+    new_model_name = f"best_{time_str}.pt"
+    shutil.copy(source_weight, os.path.join(target_dir, new_model_name))
+    # 상시 참조용 고정 이름으로도 하나 더 복사해두면 편리합니다.
+    shutil.copy(source_weight, os.path.join(target_dir, "best_shaker.pt"))
+
+    # 5. [추가] 평가지표 시각화 자료 추출
+    # 학습 결과 폴더(runs/detect/trainX)에서 주요 차트만 골라냅니다.
+    metrics_to_copy = [
+        "results.png",           # 학습 곡선 (Loss, mAP 등)
+        "confusion_matrix.png",   # 혼동 행렬 (어떤 물체랑 헷갈려하는지 확인용)
+        "PR_curve.png",          # 정밀도-재현율 곡선
+        "F1_curve.png",          # F1 스코어 곡선
+        "val_batch0_labels.jpg"  # 실제 정답지 샘플
+    ]
     
-    print(f"✅ 학습 완료!")
-    print(f"👉 저장된 최신 모델: {new_filename}")
+    eval_folder = os.path.join(target_dir, f"eval_{time_str}")
+    os.makedirs(eval_folder, exist_ok=True)
+    
+    for filename in metrics_to_copy:
+        src = os.path.join(save_dir, filename)
+        if os.path.exists(src):
+            shutil.copy(src, os.path.join(eval_folder, filename))
+            
+    print(f"📊 평가지표 시각화 완료: {eval_folder}")
+    print(f"✅ 모든 프로세스 완료! 최신 모델: {new_model_name}")
 
 if __name__ == '__main__':
     train_and_update_model()

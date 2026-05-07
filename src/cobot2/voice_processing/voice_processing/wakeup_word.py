@@ -16,11 +16,18 @@ class WakeupWord:
     THRESHOLD = 0.1
 
     def __init__(self, buffer_size):
-        self.model = None
+        # 🚨 유실되었던 모델 초기화 코드 복구
+        self.model = Model(
+            wakeword_models=[MODEL_PATH],
+            inference_framework=INFERENCE_FRAMEWORK,
+        )
         self.model_name = MODEL_NAME.split(".", maxsplit=1)[0]
         self.stream = None
         self.buffer_size = buffer_size
         self.last_confidence: float = 0.0
+
+    def set_stream(self, stream):
+        self.stream = stream
 
     def is_wakeup(self) -> bool:
         audio_chunk = np.frombuffer(

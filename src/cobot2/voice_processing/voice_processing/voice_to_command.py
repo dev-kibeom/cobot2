@@ -26,20 +26,17 @@ if not openai_api_key:
     )
 
 
-class GetKeyword(Node):
+class VoiceToCommand(Node):
     def __init__(self):
-        super().__init__("get_keyword_node")
+        super().__init__("voice_to_command")
         
         # ====================== 노드 통신 ====================== #
         self.command_pub = self.create_publisher(String, '/voice_command',   10)
         self.wakeup_pub  = self.create_publisher(String, '/wakeup_status',   10)
         self.stt_pub     = self.create_publisher(String, '/stt_result',      10)
+        self.reply_pub   = self.create_publisher(String, '/voice_reply',     10)
         # ===================================================== #
         
-        self.llm = ChatOpenAI(
-            model="gpt-4o", temperature=0.2, openai_api_key=openai_api_key
-        )
-
         prompt_content = """
         당신은 가정용 협동로봇의 음성 명령 파서다.
         사용자 발화를 단위 동작 시퀀스로 분해하고, 자연스러운 한국어 reply를 함께 생성한다.
@@ -106,8 +103,6 @@ class GetKeyword(Node):
         self.lang_chain = self.prompt_template | self.llm
         self.stt = STT(openai_api_key=openai_api_key)
 
-        super().__init__("get_keyword_node")
-
         mic_config = MicConfig(
             chunk=12000,
             rate=48000,
@@ -119,10 +114,7 @@ class GetKeyword(Node):
         self.mic_controller = MicController(config=mic_config)
         self.wakeup_word = WakeupWord(buffer_size=mic_config.buffer_size)
 
-        self.command_pub = self.create_publisher(String, "/voice_command", 10)
-        self.reply_pub = self.create_publisher(String, "/voice_reply", 10)
-
-        self.get_logger().info("get_keyword_node initialized.")
+        self.get_logger().info("voice_to_command initialized.")
         self.get_logger().info("listening for wakeup word in background...")
         self.listen_thread = threading.Thread(target=self._listen_loop, daemon=True)
         self.listen_thread.start()
@@ -137,7 +129,7 @@ class GetKeyword(Node):
                 time.sleep(3)
                 continue
 
-            self.get_logger().info("💤 'Hello Rokey' 웨이크업 워드 대기 중...")
+            self.get_logger().info("💤 'What's up, Hommie!' 웨이크업 워드 대기 중...")
 
             # wakeup_word 감지 루프 — confidence 실시간 발행
             while rclpy.ok():
@@ -152,14 +144,16 @@ class GetKeyword(Node):
             self.get_logger().info("🌟 [웨이크업 감지] 네, 말씀하세요!")
             self.mic_controller.record_audio()
 
-            temp_wav_path = "/tmp/command.wav"
-            self.mic_controller.save_wav(temp_wav_path)
+            # 🚨 수정된 부분: 파일을 임시 저장하지 않고 메모리(bytes)로 직접 받아 STT에 전달
+            wav_data = self.mic_controller.get_wav_data()
 
             # STT 수행 전에 자원 충돌방지를 위해 마이크 스트림 닫기
             self.mic_controller.close_stream()
 
             self.get_logger().info("🧠 STT 및 LLM 분석 중...")
-            output_message = self.stt.speech2text(temp_wav_path)
+            
+            # 파일 경로 대신 오디오 데이터를 넘겨줌
+            output_message = self.stt.speech2text(wav_data)
 
             stt_msg = String()
             stt_msg.data = output_message
@@ -190,7 +184,7 @@ class GetKeyword(Node):
 
 def main():
     rclpy.init()
-    node = GetKeyword()
+    node = VoiceToCommand()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
