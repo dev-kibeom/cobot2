@@ -44,46 +44,47 @@ class VoiceToCommand(Node):
 
         [출력 형식]
         {{
-        "sequence": [{{"step": N, "action": "<액션>", "params": {{...}}}}],
+        "sequence": [{{"step": N, "action": "<액션>", "params": {{"target": "<값>"}} 또는 {{}}}}],
         "reply": "한 문장"
         }}
-
         [액션 카탈로그]
-
-        ▸ pick(object)   : 물체를 집는다.
-        ▸ shake()        : 잡고 있는 물체를 흔든다. ★ pick 이후에만 사용.
-        ▸ place(location): 지정 위치에 내려놓는다. ★ pick 이후에만 사용.
-        ▸ reset()        : 홈 포지션으로 복귀한다 (그리퍼 열림). 모든 정상 시퀀스의 종료 동작.
-
-        [지원 값]
-
-        - object: "사과"
-        - location: "쓰레기통"
-
+        ▸ pick(target)            : 물체를 수직으로 집는다.
+        ▸ pick_horizontal(target) : 물체를 수평으로 집는다.
+        ▸ finding(target)         : 물체 위치를 탐색한다. "어디있어", "찾아봐" 같은 단독 탐색 발화 시.
+        ▸ place(target)           : 지정 위치에 내려놓는다. ★ pick / pick_horizontal 이후에만 사용.
+        ▸ shake()                 : 잡고 있는 물체를 흔든다. ★ pick / pick_horizontal 이후에만 사용.
+        ▸ reset()                 : 홈 포지션으로 복귀한다 (그리퍼 열림). 모든 정상 시퀀스의 종료 동작.
+        [지원 값 (params.target 키로 발행)]
+        - 객체 (한국어 발화 → 영어로 발행):
+          · "사과"   → "apple"   (★ 항상 pick 으로 잡는다)
+          · "후추통" → "shaker"  (★ 항상 pick_horizontal 으로 잡는다)
+        - 위치 (한국어 그대로 발행):
+          · "쓰레기통"
         [규칙]
-
-        1. 모든 정상 시퀀스는 마지막에 reset 으로 종료한다 (단순 홈 복귀 명령은 reset 단독).
-        2. 한 시퀀스에 pick은 최대 1번.
-        3. 카탈로그에 없는 액션이나 지원하지 않는 값을 요청하면 sequence는 [], reply는 거절 멘트.
-        4. step 번호는 1부터 순차.
-
+        1. 객체별 잡는 방식은 고정이다. 사용자 발화의 "수직"/"수평"/"가로" 같은 단어와 무관하게:
+           - apple → 항상 pick
+           - shaker → 항상 pick_horizontal
+        2. 모든 정상 시퀀스는 마지막에 reset 으로 종료한다 (단순 홈 복귀 / 단순 finding 발화는 단독).
+        3. 한 시퀀스에 pick / pick_horizontal 은 합쳐 최대 1번.
+        4. params 는 항상 {{"target": ...}} 형식. 액션 자체가 인자 없으면 {{}}.
+        5. 객체는 영어(apple/shaker)로, 위치는 한국어(쓰레기통)로 발행.
+        6. 카탈로그에 없는 액션이나 지원하지 않는 값을 요청하면 sequence 는 [], reply 는 거절 멘트.
+        7. step 번호는 1부터 순차.
         [예시]
-
         사용자: "사과 버려줘"
-        {{"sequence":[{{"step":1,"action":"pick","params":{{"object":"사과"}}}},{{"step":2,"action":"place","params":{{"location":"쓰레기통"}}}},{{"step":3,"action":"reset","params":{{}}}}],"reply":"네, 사과를 쓰레기통에 버리겠습니다."}}
-
-        사용자: "사과 흔들어줘"
-        {{"sequence":[{{"step":1,"action":"pick","params":{{"object":"사과"}}}},{{"step":2,"action":"shake","params":{{}}}},{{"step":3,"action":"reset","params":{{}}}}],"reply":"네, 사과를 흔들어드릴게요."}}
-
+        {{"sequence":[{{"step":1,"action":"pick","params":{{"target":"apple"}}}},{{"step":2,"action":"place","params":{{"target":"쓰레기통"}}}},{{"step":3,"action":"reset","params":{{}}}}],"reply":"네, 사과를 쓰레기통에 버리겠습니다."}}
+        사용자: "후추통 잡아"
+        {{"sequence":[{{"step":1,"action":"pick_horizontal","params":{{"target":"shaker"}}}},{{"step":2,"action":"reset","params":{{}}}}],"reply":"네, 후추통을 잡겠습니다."}}
+        사용자: "후추통 흔들어"
+        {{"sequence":[{{"step":1,"action":"pick_horizontal","params":{{"target":"shaker"}}}},{{"step":2,"action":"shake","params":{{}}}},{{"step":3,"action":"reset","params":{{}}}}],"reply":"네, 후추통을 흔들겠습니다."}}
         사용자: "사과 흔들고 쓰레기통에 버려"
-        {{"sequence":[{{"step":1,"action":"pick","params":{{"object":"사과"}}}},{{"step":2,"action":"shake","params":{{}}}},{{"step":3,"action":"place","params":{{"location":"쓰레기통"}}}},{{"step":4,"action":"reset","params":{{}}}}],"reply":"네, 사과를 흔들고 쓰레기통에 버리겠습니다."}}
-
+        {{"sequence":[{{"step":1,"action":"pick","params":{{"target":"apple"}}}},{{"step":2,"action":"shake","params":{{}}}},{{"step":3,"action":"place","params":{{"target":"쓰레기통"}}}},{{"step":4,"action":"reset","params":{{}}}}],"reply":"네, 사과를 흔들고 쓰레기통에 버리겠습니다."}}
+        사용자: "사과 어디있어"
+        {{"sequence":[{{"step":1,"action":"finding","params":{{"target":"apple"}}}}],"reply":"사과를 찾아볼게요."}}
         사용자: "홈으로 가"
         {{"sequence":[{{"step":1,"action":"reset","params":{{}}}}],"reply":"네, 홈 포지션으로 복귀하겠습니다."}}
-
         사용자: "컵 가져와"
-        {{"sequence":[],"reply":"죄송합니다. 현재는 사과만 다룰 수 있어요."}}
-
+        {{"sequence":[],"reply":"죄송합니다. 현재는 사과와 후추통만 다룰 수 있어요."}}
         사용자: "그냥 흔들어"
         {{"sequence":[],"reply":"어떤 물건을 흔들까요?"}}
 
@@ -142,45 +143,62 @@ class VoiceToCommand(Node):
                 break
 
             self.get_logger().info("🌟 [웨이크업 감지] 네, 말씀하세요!")
+            
+            # 5초간 녹음 (별도 스레드라 ROS 메인루프에 영향 없음)
             self.mic_controller.record_audio()
-
-            # 🚨 수정된 부분: 파일을 임시 저장하지 않고 메모리(bytes)로 직접 받아 STT에 전달
             wav_data = self.mic_controller.get_wav_data()
-
-            # STT 수행 전에 자원 충돌방지를 위해 마이크 스트림 닫기
             self.mic_controller.close_stream()
 
             self.get_logger().info("🧠 STT 및 LLM 분석 중...")
             
-            # 파일 경로 대신 오디오 데이터를 넘겨줌
-            output_message = self.stt.speech2text(wav_data)
+            try:
+                # 1. STT 변환 및 발행
+                output_message = self.stt.speech2text(wav_data)
+                self.get_logger().info(f"🗣️ STT 인식 결과: {output_message}")
+                self.stt_pub.publish(String(data=output_message))
 
-            stt_msg = String()
-            stt_msg.data = output_message
-            self.stt_pub.publish(stt_msg)
+                # 2. LLM을 통해 시퀀스와 응답 추출
+                sequence, reply = self.extract_keyword(output_message)
+                self.get_logger().warn(f"로봇 동작 시퀀스: {sequence}")
+                self.get_logger().warn(f"로봇 음성 응답: {reply}")
 
-            # LLM 체인 실행
-            response = self.lang_chain.invoke({"user_input": output_message})
-            sequence_json = response.content.strip()
+                # 3. /voice_command 토픽 발행 (Executer 용)
+                cmd_msg = String()
+                cmd_msg.data = json.dumps(sequence, ensure_ascii=False)
+                self.command_pub.publish(cmd_msg)
 
-            self.get_logger().warn(f"LLM 출력결과:\n{sequence_json}")
-
-            # 추출된 JSON 시퀀스를 토픽으로 발행
-            msg = String()
-            msg.data = sequence_json
-            self.command_pub.publish(msg)
-            self.get_logger().info("✅ /voice_command 토픽으로 JSON 시퀀스 발행 완료!")
+                # 4. /voice_reply 토픽 발행 (Voice Client TTS 용)
+                reply_msg = String()
+                reply_msg.data = reply
+                self.reply_pub.publish(reply_msg)
+                
+                self.get_logger().info("✅ 명령어 및 응답 발행 완료!\n" + "="*40)
+                
+            except json.JSONDecodeError as e:
+                self.get_logger().error(f"❌ LLM JSON 파싱 실패: {e}")
+                self.reply_pub.publish(String(data="명령을 이해하지 못했습니다. 다시 말씀해 주세요."))
+            except Exception as e:
+                self.get_logger().error(f"❌ 처리 중 예외 발생: {e}")
+                self.reply_pub.publish(String(data="시스템 에러가 발생했습니다."))
         
     def _publish_wakeup(self, detected: bool):
+        """순수하게 웨이크업 상태만 퍼블리시하는 함수로 원상복구"""
         msg = String()
         msg.data = json.dumps({
             'type':       'wakeup',
-            'wake_word':  'hello rokey',
+            'wake_word':  'whatsup homie',
             'confidence': self.wakeup_word.last_confidence,
             'detected':   detected,
         }, ensure_ascii=False)
         self.wakeup_pub.publish(msg)
-
+            
+    def extract_keyword(self, output_message):
+        """LLM 응답을 sequence와 reply로 분리"""
+        response = self.lang_chain.invoke({"user_input": output_message})
+        result = json.loads(response.content)
+        sequence = result.get("sequence", [])
+        reply = str(result.get("reply", ""))
+        return sequence, reply
 
 def main():
     rclpy.init()

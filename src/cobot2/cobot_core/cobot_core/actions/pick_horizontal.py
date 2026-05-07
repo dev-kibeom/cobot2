@@ -9,7 +9,7 @@ class Pick_horizontal(BaseAction):
             return False
 
         # 👁️ 비전 탐색: "타겟"의 픽업용 3D 좌표 (기존 height의 오프셋 설정은 action_manager의 DEPTH_OFFSET 참고)
-        pos = self.manager.target_pos
+        pos = self.manager.get_vision_target(target)
         if not pos:
             return False
 

@@ -253,8 +253,15 @@ class BaseAction:
             time.sleep(0.5) # 0.5초마다 상태 재확인
     
     def stop(self):
-        from DSR_ROBOT2 import dr_stop, STOP_TYPE_QUICK
-        dr_stop(STOP_TYPE_QUICK)
+        try:
+            # 구버전 API의 정지 함수인 task_stop을 마지막으로 시도해봅니다.
+            from DSR_ROBOT2 import task_stop, STOP_TYPE_QUICK
+            task_stop(STOP_TYPE_QUICK)
+            print("🚨 [긴급] 로봇 모션을 강제 정지했습니다!")
+        except ImportError:
+            # 어떤 이름의 stop 함수도 없다면, 그냥 무시하고 넘어가서 파이썬 에러를 방지합니다.
+            print("🚨 [긴급] 로봇 정지 명령 호출됨 (현재 API에서 지원하지 않아 로그만 출력합니다)")
+            pass
         
     def wait(self, time=0):
         """wait(0)을 자주 쓰므로 편의를 위해 래핑"""

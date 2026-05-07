@@ -13,7 +13,7 @@ INFERENCE_FRAMEWORK = "onnx"
 
 
 class WakeupWord:
-    THRESHOLD = 0.1
+    THRESHOLD = 0.001
 
     def __init__(self, buffer_size):
         # 🚨 유실되었던 모델 초기화 코드 복구
