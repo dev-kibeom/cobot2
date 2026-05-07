@@ -17,34 +17,34 @@ class TestVoiceCommand(Node):
                 "params": {},
                 "desc": "reset",
             },
-            {
-                "action": "finding",
-                "params": {'target':'shaker'},
-                "desc": "shaker 탐색중",
-            },
-            
             # {
-            #     "action": "movesx",
-            #     "params": {'poses':[[0, -10, 10, 0, 0, 0],[0, -10, -10, 0, 0, 0],[0, 0, -10, 0, 0, 0]], 'mode':'rel'},
-            #     "desc": "1123123123123123",
+            #     "action": "finding",
+            #     "params": {'target':'shaker'},
+            #     "desc": "shaker 탐색중",
             # },
+            
             {
-                "action": "pick_horizontal",
-                "params": {'target':'shaker'
-                    },
-                "desc": '잡기'
-            },
-            {
-                "action": "shake",
-                "params": {
-                    },
-                'decs' : '흔들기'
-            },
-            {
-                "action": "reset",
+                "action": "pour",
                 "params": {},
-                "desc": "reset",
-            }
+                "desc": "붓기",
+            },
+            # {
+            #     "action": "pick_horizontal",
+            #     "params": {'target':'shaker'
+            #         },
+            #     "desc": '잡기'
+            # },
+            # {
+            #     "action": "shake",
+            #     "params": {
+            #         },
+            #     'decs' : '흔들기'
+            # },
+            # {
+            #     "action": "reset",
+            #     "params": {},
+            #     "desc": "reset",
+            # }
         ]
 
         msg = String()

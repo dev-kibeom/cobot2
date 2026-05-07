@@ -79,7 +79,7 @@ class ActionManager():
                    'gripper_open', 'gripper_close', 'gripper_open_little',
                    'compliance_on', 'compliance_off', 'set_desired_force',
                    'periodic','amovej','amovel', 'movesx', 'movesj',
-                   'get_current_posx','get_current_posj']
+                   'get_current_posx','get_current_posj','clear_alarm']
         
         for m in methods:
             # getattr(obj, name): 객체에서 속성 가져오기

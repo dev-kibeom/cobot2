@@ -162,7 +162,7 @@ class BaseAction:
         
         fc_mode = DR_FC_MOD_ABS if mode == 'abs' else DR_FC_MOD_REL
         
-        # DSR 파이썬 API에 ref 키워드가 없으므로 함수 호출 시 넘기지 않습니다.
+        # DSR 파이썬 pI에 ref 키워드가 없으므로 함수 호출 시 넘기지 않습니다.
         # (compliance_on에서 설정된 ref를 시스템이 자동으로 따라갑니다)
         res = set_desired_force(fd=fd, dir=dir, mod=fc_mode)
         
