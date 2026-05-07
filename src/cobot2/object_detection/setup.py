@@ -14,6 +14,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'resource'), ['resource/best.pt', 
                                                            'resource/class_name_tool.json',
+                                                           'resource/class_name_fruits.json',
                                                            'resource/class_name_fruits.json']),
     ],
     install_requires=['setuptools', 'od_msg'],

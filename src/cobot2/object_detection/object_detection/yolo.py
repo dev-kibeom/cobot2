@@ -14,7 +14,7 @@ PACKAGE_NAME = "object_detection"
 PACKAGE_PATH = get_package_share_directory(PACKAGE_NAME)
 
 YOLO_MODEL_FILENAME = "best.pt"
-YOLO_CLASS_NAME_JSON = "class_name_fruits.json"
+YOLO_CLASS_NAME_JSON = "class_name.json"
 
 YOLO_MODEL_PATH = os.path.join(PACKAGE_PATH, "resource", YOLO_MODEL_FILENAME)
 YOLO_JSON_PATH = os.path.join(PACKAGE_PATH, "resource", YOLO_CLASS_NAME_JSON)
@@ -65,7 +65,13 @@ class YoloModel:
         print("classes: ")
         print(results[0].names)
         detections = self._aggregate_detections(results)
-        label_id = self.reversed_class_dict[target]
+        
+        label_id = self.reversed_class_dict.get(target)
+        
+        if label_id is None:
+            print(f"⚠️ 비전 에러: '{target}'은(는) JSON 파일에 등록되지 않은 물체입니다.")
+            return None, None
+        
         print("label_id: ", label_id)
         print("detections: ", detections)
 
