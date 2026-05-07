@@ -1,6 +1,7 @@
 import cv2
 import rclpy
 import numpy as np
+import urllib.request
 from rclpy.node import Node
 from typing import Any, Callable, Optional, Tuple
 
@@ -122,6 +123,7 @@ class ObjectDetectionNode(Node):
             if frame is not None:
                 cv2.imshow("Vision AI - Target Detection", frame)
                 cv2.waitKey(1)
+            self._push_display_frame(frame, box=None, target=target, score=None)
             return 0.0, 0.0, 0.0
         
         self.get_logger().info(f"Detection: box={box}, score={score}")
@@ -147,6 +149,8 @@ class ObjectDetectionNode(Node):
         #     cv2.waitKey(1) # 화면을 갱신하기 위한 필수 대기 시간
         # ==========================================
 
+        self._push_display_frame(frame, box=box, target=target, score=score)
+
         cz = self._get_depth(cx, cy)
 
         if cz is None or cz <= 0:
@@ -154,6 +158,30 @@ class ObjectDetectionNode(Node):
             return 0.0, 0.0, 0.0
 
         return self._pixel_to_camera_coords(cx, cy, cz)
+
+    def _push_display_frame(self, frame, box, target, score,
+                            url='http://localhost:8000/admin/display/frame'):
+        """bbox 오버레이한 프레임을 Manager UI display API로 push."""
+        if frame is None:
+            return
+        vis = frame.copy()
+        if box is not None and score is not None:
+            x1, y1, x2, y2 = map(int, box)
+            cv2.rectangle(vis, (x1, y1), (x2, y2), (79, 131, 244), 2)
+            label = f"{target} {score:.2f}"
+            (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+            cv2.rectangle(vis, (x1, y1 - th - 8), (x1 + tw + 4, y1), (79, 131, 244), -1)
+            cv2.putText(vis, label, (x1 + 2, y1 - 4),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        try:
+            _, buf = cv2.imencode('.jpg', vis, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            req = urllib.request.Request(
+                url, data=buf.tobytes(),
+                headers={'Content-Type': 'image/jpeg'},
+            )
+            urllib.request.urlopen(req, timeout=1)
+        except Exception:
+            pass
 
 def main(args=None):
     rclpy.init(args=args)
