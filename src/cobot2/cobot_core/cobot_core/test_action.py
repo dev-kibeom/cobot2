@@ -26,7 +26,7 @@ class TestVoiceCommand(Node):
             {
                 "action": "pour",
                 "params": {},
-                "desc": "붓기",
+                "desc": "금쪽아 좀 돼라",
             },
             # {
             #     "action": "pick_horizontal",

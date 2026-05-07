@@ -11,6 +11,7 @@ class Pick(BaseAction):
         # 👁️ 비전 탐색: "타겟"의 픽업용 3D 좌표
         pos = self.manager.get_vision_target(target)
         if not pos: 
+            self.manager.perform('finding', target=target)
             return False
         
         self.manager.target_pos
