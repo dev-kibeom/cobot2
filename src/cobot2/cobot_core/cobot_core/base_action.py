@@ -39,6 +39,7 @@ class BaseAction:
             ref = DR_TOOL
         else:
             print("❌ 잘못된 move 모드!")
+            return False
             
         pos = posx(pos)
         res = movel(pos, vel=v, acc=a, time=time, radius=radius, mod=mode, ref=ref)
@@ -260,6 +261,20 @@ class BaseAction:
         from DSR_ROBOT2 import wait
         return wait(time)
 
+    def get_current_posx(self):
+        from DSR_ROBOT2 import get_current_posx
+
+        pos, _ = get_current_posx()
+        print(pos)
+        return pos
+
+    def get_current_posj(self):
+        from DSR_ROBOT2 import get_current_posj
+
+        joint, _ = get_current_posj()
+        print(joint)
+        return joint
+    
 # =======================================================================
 
     def amovej(self, joint, vel=None, acc=None, time=0, mode='rel'):        
@@ -295,7 +310,7 @@ class BaseAction:
 
 # =======================================================================
 
-    def amovel(self, pos, vel=None, acc=None, time=0, mode='abs'):
+    def amovel(self, pos, vel=None, acc=None, time=0, mode='abs', ref='base'):
         v = vel if vel is not None else self.vel_linear
         a = acc if acc is not None else self.acc_linear
 

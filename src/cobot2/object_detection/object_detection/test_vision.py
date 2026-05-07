@@ -19,7 +19,7 @@ def main():
 
     # 1. 모델 로드
     target_dir = os.path.expanduser('~/cobot_ws/src/cobot2/object_detection/resource/')
-    pt_files = glob.glob(os.path.join(target_dir, 'best_shaker.pt'))
+    pt_files = glob.glob(os.path.join(target_dir, 'best.pt'))
 
     if not pt_files:
         print(f"❌ '{target_dir}' 경로에 모델 파일(.pt)이 없습니다!")

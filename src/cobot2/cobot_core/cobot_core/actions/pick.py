@@ -13,6 +13,8 @@ class Pick(BaseAction):
         if not pos: 
             return False
         
+        self.manager.target_pos
+        
         tx, ty, tz, rx, ry, rz = pos
         print(f"🍎 '{target}' 좌표({tx:.1f}, {ty:.1f}, {tz:.1f})로 Pick 시퀀스를 시작합니다.")
         
@@ -23,7 +25,7 @@ class Pick(BaseAction):
         if not self.manager.perform('movel', pos=approach_pos, mode='abs'): return False
         
         # 움켜쥐기 위해 하강: 표면 좌표보다 살짝 깊게 들어가서 꽉 쥠
-        grip_pos = [tx, ty, tz - 50.0, rx, ry, rz]
+        grip_pos = [tx, ty, tz - 70.0, rx, ry, rz]
         if not self.manager.perform('movel', pos=grip_pos, mode='abs'): return False
         
         # 잡기

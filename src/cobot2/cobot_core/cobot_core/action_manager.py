@@ -19,6 +19,9 @@ class ActionManager():
         self._action_map = {}
         self.is_error = False   # 시스템 에러 상태 플래그
         
+        self.target = None
+        self.target_pos = None
+        
         # 👁️ 비전 서비스 클라이언트 초기화 (공용 인터페이스)
         self.vision_client = self.node.create_client(GetTargetPose, '/get_3d_position')
         
@@ -75,7 +78,8 @@ class ActionManager():
         methods = ['movel', 'movej', 'wait', 'reset', 
                    'gripper_open', 'gripper_close', 'gripper_open_little',
                    'compliance_on', 'compliance_off', 'set_desired_force',
-                   'periodic', 'clear_alarm','amovej','amovel', 'movesx', 'movesj']
+                   'periodic','amovej','amovel', 'movesx', 'movesj',
+                   'get_current_posx','get_current_posj']
         
         for m in methods:
             # getattr(obj, name): 객체에서 속성 가져오기
@@ -146,6 +150,8 @@ class ActionManager():
             self.node.get_logger().error("👁️ ❌ Vision AI 노드(/get_3d_position)가 응답하지 않습니다.")
             return None
         
+        self.target = target_name
+        
         # 서비스 요청 객체 생성
         req = GetTargetPose.Request()
         req.target_name = target_name
@@ -163,6 +169,9 @@ class ActionManager():
             
             if base_coord:
                 self.node.get_logger().info(f"👁️ ✅ '{target_name}' 최종 변환 좌표: {base_coord}")
+                
+                self.target_pos = base_coord
+                
                 return base_coord
             return None
         else:
