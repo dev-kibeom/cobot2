@@ -21,8 +21,15 @@ YOLO_JSON_PATH = os.path.join(PACKAGE_PATH, "resource", YOLO_CLASS_NAME_JSON)
 
 
 class YoloModel:
-    def __init__(self):
-        self.model = YOLO(YOLO_MODEL_PATH)
+    def __init__(self, model_filename, json_filename, conf_thres, iou_thres):
+        self.conf_thres = conf_thres
+        self.iou_thres = iou_thres
+        
+        package_path = get_package_share_directory("object_detection")
+        model_path = os.path.join(package_path, "resource", model_filename)
+        json_path = os.path.join(package_path, "resource", json_filename)
+        
+        self.model = YOLO(model_path)
         with open(YOLO_JSON_PATH, "r", encoding="utf-8") as file:
             class_dict = json.load(file)
             self.reversed_class_dict = {v: int(k) for k, v in class_dict.items()}
@@ -82,7 +89,7 @@ class YoloModel:
         best_det = max(matches, key=lambda x: x["score"])
         return best_det["box"], best_det["score"]
 
-    def _aggregate_detections(self, results, confidence_threshold=0.5, iou_threshold=0.5):
+    def _aggregate_detections(self, results):
         """
         Fuse raw detection boxes across frames using IoU-based grouping
         and majority voting for robust final detections.
@@ -94,7 +101,7 @@ class YoloModel:
                 res.boxes.conf.tolist(),
                 res.boxes.cls.tolist(),
             ):
-                if score >= confidence_threshold:
+                if score >= self.conf_thres:
                     raw.append({"box": box, "score": score, "label": int(label)})
 
         final = []
@@ -107,7 +114,7 @@ class YoloModel:
             used[i] = True
             for j, other in enumerate(raw):
                 if not used[j] and other["label"] == det["label"]:
-                    if self._iou(det["box"], other["box"]) >= iou_threshold:
+                    if self._iou(det["box"], other["box"]) >= self.iou_thres:
                         group.append(other)
                         used[j] = True
 

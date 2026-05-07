@@ -9,9 +9,6 @@ import cobot_core.actions as actions
 from ament_index_python.packages import get_package_share_directory
 from .base_action import BaseAction
 from od_msg.srv import GetTargetPose
-
-DEPTH_OFFSET = -35.0  # 타겟 35mm 앞까지 접근
-MIN_DEPTH = 20.0      # 바닥 충돌 방지 최소 높이
         
 class ActionManager():
     def __init__(self, node):
@@ -137,7 +134,7 @@ class ActionManager():
         target_base_coord = np.dot(base2cam, coord)[:3]
         
         # 2. 바닥 충돌 방지 최소 높이(Z) 보정
-        target_base_coord[2] = max(target_base_coord[2], 20.0)
+        target_base_coord[2] = max(target_base_coord[2], self.node.min_depth)
 
         # 3. 6자유도 리스트로 반환 (손목 각도는 현재 상태 유지)
         result_pos = target_base_coord.tolist()

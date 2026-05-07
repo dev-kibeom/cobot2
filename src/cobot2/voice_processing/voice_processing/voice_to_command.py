@@ -30,6 +30,16 @@ class VoiceToCommand(Node):
     def __init__(self):
         super().__init__("voice_to_command")
         
+        self.declare_parameter('mic_chunk', 12000)
+        self.declare_parameter('mic_rate', 48000)
+        self.declare_parameter('record_seconds', 5)
+        self.declare_parameter('llm_model', 'gpt-4o')
+        self.declare_parameter('llm_temperature', 0.0)
+        # (wakeup 관련 파라미터는 생략, 필요시 동일하게 추가 가능)
+        
+        llm_model = self.get_parameter('llm_model').value
+        llm_temp = self.get_parameter('llm_temperature').value
+        
         # ====================== 노드 통신 ====================== #
         self.command_pub = self.create_publisher(String, '/voice_command',   10)
         self.wakeup_pub  = self.create_publisher(String, '/wakeup_status',   10)
@@ -93,8 +103,8 @@ class VoiceToCommand(Node):
         """
 
         self.llm = ChatOpenAI(
-            model="gpt-4o",
-            temperature=0.0,
+            model=llm_model,
+            temperature=llm_temp,
             openai_api_key=openai_api_key,
             model_kwargs={"response_format": {"type": "json_object"}},
         )

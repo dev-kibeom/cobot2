@@ -17,7 +17,20 @@ PACKAGE_PATH = get_package_share_directory(PACKAGE_NAME)
 
 class ObjectDetectionNode(Node):
     def __init__(self, model_name = 'yolo'):
-        super().__init__('object_detection_node')
+        super().__init__('object_detection')
+        
+        self.declare_parameter('model_name', 'yolo')
+        self.declare_parameter('yolo_model_filename', 'best.pt')
+        self.declare_parameter('yolo_class_name_json', 'class_name.json')
+        self.declare_parameter('confidence_threshold', 0.5)
+        self.declare_parameter('iou_threshold', 0.5)
+        
+        model_name = self.get_parameter('model_name').value
+        self.model_filename = self.get_parameter('yolo_model_filename').value
+        self.json_filename = self.get_parameter('yolo_class_name_json').value
+        self.conf_threshold = self.get_parameter('confidence_threshold').value
+        self.iou_threshold = self.get_parameter('iou_threshold').value
+        
         self.img_node = ImgNode()
         self.model = self._load_model(model_name)
         self.intrinsics = self._wait_for_valid_data(
@@ -34,7 +47,8 @@ class ObjectDetectionNode(Node):
     def _load_model(self, name):
         """모델 이름에 따라 인스턴스를 반환합니다."""
         if name.lower() == 'yolo':
-            return YoloModel()
+            return YoloModel(self.model_filename, self.json_filename, 
+                             self.conf_threshold, self.iou_threshold)
         raise ValueError(f"Unsupported model: {name}")
 
     def handle_get_depth(self, request, response):

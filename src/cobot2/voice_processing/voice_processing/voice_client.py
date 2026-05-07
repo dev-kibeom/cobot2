@@ -56,6 +56,12 @@ def speak(text: str, voice: str = "onyx", model: str = "tts-1"):
 class VoiceClient(Node):
     def __init__(self):
         super().__init__("voice_client_node")
+        
+        self.declare_parameter('tts_model', 'tts-1')
+        self.declare_parameter('tts_voice', 'onyx')
+        
+        self.tts_model = self.get_parameter('tts_model').value
+        self.tts_voice = self.get_parameter('tts_voice').value
 
         self.create_subscription(String, "/voice_command", self._on_command, 10)
         self.create_subscription(String, "/voice_reply", self._on_reply, 10)
@@ -72,7 +78,7 @@ class VoiceClient(Node):
     def _on_reply(self, msg: String):
         text = msg.data
         print(f"  /voice_reply   : {text}")
-        speak(text)
+        speak(text, voice=self.tts_voice, model=self.tts_model)
 
 
 def main():

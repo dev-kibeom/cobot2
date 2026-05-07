@@ -1,10 +1,8 @@
-# cobot_core/setup.py
-
 import os
 from glob import glob
 from setuptools import find_packages, setup
 
-package_name = 'cobot_core'
+package_name = 'cobot_bringup'
 
 setup(
     name=package_name,
@@ -14,14 +12,16 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        # resource 폴더 내의 모든 파일(.npy 등)을 빌드 후 share 경로로 복사
-        (os.path.join('share', package_name, 'resource'), glob('resource/*')),
+        # config 폴더 등록
+        (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
+        # 나중을 위해 launch 폴더도 미리 등록
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='kibeom',
     maintainer_email='neopkrrl@gmail.com',
-    description='Core control package for Cobot2 (State, Executer, Skill Orchestrator)',
+    description='TODO: Package description',
     license='TODO: License declaration',
     extras_require={
         'test': [
@@ -30,9 +30,6 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'state_manager = cobot_core.state_manager:main',
-            'executer = cobot_core.executer:main',
-            'test_action = cobot_core.test_action:main',
         ],
     },
 )

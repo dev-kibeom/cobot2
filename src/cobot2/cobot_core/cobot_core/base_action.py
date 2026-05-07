@@ -6,13 +6,13 @@ class BaseAction:
     GRIPPER_ON = 1
     GRIPPER_OFF = 0
     
-    def __init__(self, manager, vel_linear=200, acc_linear=50, vel_angular=70, acc_angular=70):
-        self.vel_linear = vel_linear
-        self.acc_linear = acc_linear
-        self.vel_angular = vel_angular
-        self.acc_angular= acc_angular
-        
+    def __init__(self, manager):
         self.manager = manager  # ActionManager 참조
+        
+        self.vel_linear = self.manager.node.vel_linear
+        self.acc_linear = self.manager.node.acc_linear
+        self.vel_angular = self.manager.node.vel_angular
+        self.acc_angular = self.manager.node.acc_angular
 
     def execute(self, **kwargs):
         raise NotImplementedError

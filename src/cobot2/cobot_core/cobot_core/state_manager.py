@@ -16,12 +16,14 @@ class StateManager(Node):
         self.state = "IDLE"
         self.current_sequence = []
         
+        self.declare_parameter('max_retries', 2)
+        
         # 에러처리 관련 변수
         self.current_step_index = 0
         self.retry_count = 0
-        self.max_retries = 2
         self.recovery_timer = None
         self.sliced_offset = 0
+        self.max_retries = self.get_parameter('max_retries').value
         
         # 파싱된 레시피 받는 토픽, 실행자와 액션 클라이언트, 관리재 잠금 해제 서비스
         self.command_sub = self.create_subscription(String, '/voice_command', self.recipe_callback, 10)
