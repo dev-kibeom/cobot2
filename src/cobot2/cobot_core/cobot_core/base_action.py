@@ -6,13 +6,34 @@ class BaseAction:
     GRIPPER_ON = 1
     GRIPPER_OFF = 0
     
-    def __init__(self, manager, vel_linear=200, acc_linear=50, vel_angular=70, acc_angular=70):
-        self.vel_linear = vel_linear
-        self.acc_linear = acc_linear
-        self.vel_angular = vel_angular
-        self.acc_angular= acc_angular
-        
+    # 🚨 [안전 한계치 하드코딩] 협동로봇의 일반적인 안전 제한 속도
+    LIMIT_VEL_LINEAR = 500.0   # 최대 직선 속도 (mm/s)
+    LIMIT_ACC_LINEAR = 500.0   # 최대 직선 가속도 (mm/s^2)
+    LIMIT_VEL_ANGULAR = 180.0  # 최대 관절 속도 (deg/s)
+    LIMIT_ACC_ANGULAR = 180.0  # 최대 관절 가속도 (deg/s^2)
+    
+    def __init__(self, manager):
         self.manager = manager  # ActionManager 참조
+    
+    @property
+    def vel_linear(self):
+        current_val = self.manager.node.vel_linear
+        return min(current_val, self.LIMIT_VEL_LINEAR)
+
+    @property
+    def acc_linear(self):
+        current_val = self.manager.node.acc_linear
+        return min(current_val, self.LIMIT_ACC_LINEAR)
+
+    @property
+    def vel_angular(self):
+        current_val = self.manager.node.vel_angular
+        return min(current_val, self.LIMIT_VEL_ANGULAR)
+
+    @property
+    def acc_angular(self):
+        current_val = self.manager.node.acc_angular
+        return min(current_val, self.LIMIT_ACC_ANGULAR)
 
     def execute(self, **kwargs):
         raise NotImplementedError

@@ -1,0 +1,64 @@
+# -----------------------------------------------
+# 1. 로봇 제어 및 동작 파라미터 (command_executer)
+# -----------------------------------------------
+command_executer:
+  ros__parameters:
+    # 하드웨어 세팅
+    robot_id: "dsr01"
+    robot_model: "m0609"
+    robot_tool: "Tool Weight"
+    robot_tcp: "GripperDA_v1"
+    
+    # 기본 이동 속도 및 가속도 (base_action.py)
+    vel_linear: 200.0
+    acc_linear: 50.0
+    vel_angular: 70.0
+    acc_angular: 70.0
+    
+    # 그리퍼 조작 관련 높이 (action_manager.py)
+    depth_offset: -35.0  # 타겟 앞까지 접근하는 거리 (mm)
+    min_depth: 20.0      # 바닥 충돌 방지 최소 높이 (mm)
+
+# -----------------------------------------------
+# 2. 상태 및 에러 복구 파라미터 (state_manager)
+# -----------------------------------------------
+state_manager:
+  ros__parameters:
+    max_retries: 2       # 에러 발생 시 최대 재시도 횟수
+
+# -----------------------------------------------
+# 3. 비전 AI 파라미터 (object_detection_node)
+# -----------------------------------------------
+object_detection_node:
+  ros__parameters:
+    model_name: "yolo"
+    yolo_model_filename: "best.pt"
+    yolo_class_name_json: "class_name.json"
+    confidence_threshold: 0.5  # 탐지 신뢰도 하한선
+    iou_threshold: 0.5         # 중복 탐지 박스 제거(NMS) 기준점
+
+# -----------------------------------------------
+# 4. 음성 인식 및 LLM 파라미터 (voice_to_command)
+# -----------------------------------------------
+voice_to_command:
+  ros__parameters:
+    # 마이크 세팅
+    mic_chunk: 12000
+    mic_rate: 48000
+    record_seconds: 5
+    
+    # 웨이크업 워드 세팅
+    wakeup_model: "wassup_homie.onnx"
+    wakeup_threshold: 0.001
+    
+    # LLM 세팅
+    llm_model: "gpt-4o"
+    llm_temperature: 0.0
+
+# -----------------------------------------------
+# 5. 음성 합성(TTS) 파라미터 (voice_client_node)
+# -----------------------------------------------
+voice_client_node:
+  ros__parameters:
+    tts_model: "tts-1"
+    tts_voice: "onyx"

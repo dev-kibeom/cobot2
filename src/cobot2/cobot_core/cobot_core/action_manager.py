@@ -6,12 +6,11 @@ import importlib
 import pkgutil
 import cobot_core.actions as actions
 
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from ament_index_python.packages import get_package_share_directory
+
 from .base_action import BaseAction
 from od_msg.srv import GetTargetPose
-
-DEPTH_OFFSET = -35.0  # 타겟 35mm 앞까지 접근
-MIN_DEPTH = 20.0      # 바닥 충돌 방지 최소 높이
         
 class ActionManager():
     def __init__(self, node):
@@ -22,8 +21,11 @@ class ActionManager():
         self.target = None
         self.target_pos = None
         
+        self.cb_group = MutuallyExclusiveCallbackGroup()
+        
         # 👁️ 비전 서비스 클라이언트 초기화 (공용 인터페이스)
-        self.vision_client = self.node.create_client(GetTargetPose, '/get_3d_position')
+        self.vision_client = self.node.create_client(GetTargetPose, '/get_3d_position',
+                                                     callback_group=self.cb_group)
         
         # Hand-Eye 캘리브레이션 행렬 로드
         package_path = get_package_share_directory("cobot_core")
@@ -137,7 +139,7 @@ class ActionManager():
         target_base_coord = np.dot(base2cam, coord)[:3]
         
         # 2. 바닥 충돌 방지 최소 높이(Z) 보정
-        target_base_coord[2] = max(target_base_coord[2], 20.0)
+        target_base_coord[2] = max(target_base_coord[2], self.node.min_depth)
 
         # 3. 6자유도 리스트로 반환 (손목 각도는 현재 상태 유지)
         result_pos = target_base_coord.tolist()
@@ -147,7 +149,7 @@ class ActionManager():
         
     def get_vision_target(self, target_name):
         """ Action 모듈이 타겟의 최신 3D 좌표를 원할 때 호출"""
-        if not self.vision_client.wait_for_service(timeout_sec=2.0):
+        if not self.vision_client.wait_for_service(timeout_sec=3.0):
             self.node.get_logger().error("👁️ ❌ Vision AI 노드(/get_3d_position)가 응답하지 않습니다.")
             return None
         
@@ -158,10 +160,12 @@ class ActionManager():
         req.target_name = target_name
         self.node.get_logger().info(f"👁️ 🔍 '{target_name}'의 현재 좌표를 Vision AI에 요청합니다...")
         
-        # 서비스 호출
-        future = self.vision_client.call_async(req)
-        rclpy.spin_until_future_complete(self.node, future)
-        response = future.result()
+        # 비동기 대기(spin) 대신, 안전하게 분리된 콜백 그룹에서 동기 호출(call) 사용
+        try:
+            response = self.vision_client.call(req)
+        except Exception as e:
+            self.node.get_logger().error(f"👁️ ❌ 서비스 호출 실패: {e}")
+            return None
         
         # 결과 검증 및 반환
         if response is not None and response.success:
