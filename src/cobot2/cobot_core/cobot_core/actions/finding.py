@@ -10,8 +10,8 @@ class Finding(BaseAction):
             return False
 
         print(f"🔍 [finding] '{target}' 탐색 시작")
-
-        if not self.manager.perform('movel', pos = ([-100,0,0,0,0,0]), vel=150, acc=150, mode='rel'): return False
+        
+        if not self.manager.perform('movel', pos = ([-100,0,0,0,0,0]), vel=200, acc=200, mode='rel'): return False
 
         for i in range(max_try):
             print(f"🔎 [finding] 탐색 루프 {i + 1}/{max_try}")

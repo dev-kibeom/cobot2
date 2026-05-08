@@ -18,15 +18,14 @@ class TestVoiceCommand(Node):
                 "desc": "reset",
             },
             # {
-            #     "action": "finding",
+            #     "action": "pick_horizontal",
             #     "params": {'target':'shaker'},
-            #     "desc": "shaker 탐색중",
+            #     "desc": "pick_horizontal",
             # },
-            
             {
                 "action": "pour",
                 "params": {},
-                "desc": "금쪽아 좀 돼라",
+                "desc": "붓기",
             },
             # {
             #     "action": "pick_horizontal",
