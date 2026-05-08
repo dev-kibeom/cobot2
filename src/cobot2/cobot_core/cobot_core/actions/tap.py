@@ -18,7 +18,7 @@ class Tap(BaseAction):
                 return False
                 
         tx, ty, tz, rx, ry, rz = pos
-
+        if not self.manager.perform('gripper_close'): return False
         if not self.manager.perform('movel', pos=[tx, ty, tz+100, rx, ry, rz], vel=100, acc=100, mode='abs'): return False
         if not self.manager.perform('periodic', amp=[0, 0, 5, 0, 0, 0], period=[0, 0, 0.5, 0, 0, 0], repeat=2): return False
         return True

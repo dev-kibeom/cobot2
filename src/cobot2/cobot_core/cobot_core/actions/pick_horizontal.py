@@ -15,7 +15,7 @@ class PickHorizontal(BaseAction):
         coarse_pos = self.manager.get_vision_target(target)
         if not coarse_pos:
             logger.warn(f"⚠️ '{target}' 미발견. 주변 스캔을 시작합니다.")
-            if not self.manager.perform('search', target=target): return False
+            if not self.manager.perform('finding', target=target): return False
             coarse_pos = self.manager.get_vision_target(target)
             if not coarse_pos: return False
 
@@ -26,26 +26,32 @@ class PickHorizontal(BaseAction):
         # 2. Hover 및 2차 정밀 탐지 (손목 비틀기 전!)
         # ==========================================
         # 카메라가 물체를 정면으로 볼 수 있도록 타겟 상공(150mm)으로 이동
-        approach_pos = [tx, ty, tz + 150.0, rx, ry, rz]
-        if not self.manager.perform('movel', pos=approach_pos, mode='abs'): return False
+        # approach_pos = [tx, ty, tz + 200, rx, ry, rz]
+        # if not self.manager.perform('movel', pos=approach_pos, mode='abs'): return False
         
-        self.wait(0.5) # 카메라 안정화
+        # self.wait(0.5) # 카메라 안정화
         
-        logger.info("🎯 [2차 정밀 탐지] 영점 조정")
-        fine_pos = self.manager.get_vision_target(target)
+        # logger.info("🎯 [2차 정밀 탐지] 영점 조정")
+        # fine_pos = self.manager.get_vision_target(target)
         
-        if fine_pos:
-            tx, ty, tz = fine_pos[0], fine_pos[1], fine_pos[2]
-            logger.info("✨ 수평 집기 오차 보정 완료")
+        # if fine_pos:
+        #     dx = fine_pos[0] - coarse_pos[0]
+        #     dy = fine_pos[1] - coarse_pos[1]
+        #     logger.info(f"✨ 오차 보정 완료 (X: {dx:.1f}mm, Y: {dy:.1f}mm)")
+        #     # 보정된 좌표로 덮어쓰기
+        #     tx, ty, tz, rx, ry, rz = fine_pos
+        # else:
+        #     logger.warn("⚠️ 2차 탐지 실패. 1차 좌표로 강행합니다.")
 
         # ==========================================
         # 3. 손목 비틀기 (MoveJ) 및 자세 업데이트
         # ==========================================
         # 이제 정밀 좌표(tx, ty, tz)를 얻었으니 손목을 꺾어줍니다.
-        if ty >= 0:
-            if not self.manager.perform('movej', joint=([0,0,0,70,0,0]), vel=100, acc=100, mode='rel'): return False
+        if ty < 0:
+            if not self.manager.perform('movej', joint=([0,0,90,110,-90,0]), vel=100, acc=100, mode='abs'): return False
+        
         else:
-            if not self.manager.perform('movej', joint=([0,0,0,110,-180,0]), vel=100, acc=100, mode='rel'): return False
+            if not self.manager.perform('movej', joint=([0,0,90,70,90,0]), vel=100, acc=100, mode='abs'): return False
             
         # 비틀어진 손목의 각도를 현재 로봇 상태에서 읽어옴
         current_pos = self.get_current_posx()
@@ -55,7 +61,7 @@ class PickHorizontal(BaseAction):
         # 4. 수평 접근 및 그립
         # ==========================================
         # 비틀어진 각도를 유지하며 수직 하강
-        grip_pos = [tx, ty, tz - 75.0, final_rx, final_ry, final_rz]
+        grip_pos = [tx, ty, tz - 30.0, final_rx, final_ry, final_rz]
         if not self.manager.perform('movel', pos=grip_pos, mode='abs'): return False
 
         if not self.manager.perform('gripper_close'): return False
