@@ -1,0 +1,75 @@
+[
+  {
+    "command": "사과 흔들어서 버려줘",
+    "sequence": [
+      {
+        "step": 1,
+        "action": "pick",
+        "params": {
+          "target": "apple"
+        }
+      },
+      {
+        "step": 2,
+        "action": "shake",
+        "params": {}
+      },
+      {
+        "step": 3,
+        "action": "place",
+        "params": {
+          "target": "쓰레기통"
+        }
+      },
+      {
+        "step": 4,
+        "action": "reset",
+        "params": {}
+      }
+    ],
+    "reply": "네, 사과를 흔들어서 쓰레기통에 버리겠습니다."
+  },
+  {
+    "command": "안경 톡톡 두드려",
+    "sequence": [
+      {
+        "step": 1,
+        "action": "tap",
+        "params": {
+          "target": "glasses"
+        }
+      },
+      {
+        "step": 2,
+        "action": "reset",
+        "params": {}
+      }
+    ],
+    "reply": "네, 안경을 톡톡 두드리겠습니다."
+  },
+  {
+    "command": "컵 집어서 쓰레기통에 버려줘",
+    "sequence": [
+      {
+        "step": 1,
+        "action": "pick_side",
+        "params": {
+          "target": "cup"
+        }
+      },
+      {
+        "step": 2,
+        "action": "place",
+        "params": {
+          "target": "쓰레기통"
+        }
+      },
+      {
+        "step": 3,
+        "action": "reset",
+        "params": {}
+      }
+    ],
+    "reply": "네, 컵을 쓰레기통에 버리겠습니다."
+  }
+]

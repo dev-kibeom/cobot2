@@ -14,6 +14,7 @@ from rclpy.node import Node
 from std_msgs.msg import String
 
 from voice_processing.MicController import MicConfig, MicController
+from voice_processing.prompt import PROMPT_CONTENT
 from voice_processing.stt import STT
 from voice_processing.wakeup_word import WakeupWord
 
@@ -45,62 +46,10 @@ class VoiceToCommand(Node):
         self.wakeup_pub  = self.create_publisher(String, '/wakeup_status',   10)
         self.stt_pub     = self.create_publisher(String, '/stt_result',      10)
         self.reply_pub   = self.create_publisher(String, '/voice_reply',     10)
+        self.create_subscription(String, '/status', self._on_status, 10)
         # ===================================================== #
-        
-        prompt_content = """
-        당신은 가정용 협동로봇의 음성 명령 파서다.
-        사용자 발화를 단위 동작 시퀀스로 분해하고, 자연스러운 한국어 reply를 함께 생성한다.
-        JSON만 출력. 다른 텍스트 금지.
 
-        [출력 형식]
-        {{
-        "sequence": [{{"step": N, "action": "<액션>", "params": {{"target": "<값>"}} 또는 {{}}}}],
-        "reply": "한 문장"
-        }}
-        [액션 카탈로그]
-        ▸ pick(target)            : 물체를 수직으로 집는다.
-        ▸ pick_horizontal(target) : 물체를 수평으로 집는다.
-        ▸ finding(target)         : 물체 위치를 탐색한다. "어디있어", "찾아봐" 같은 단독 탐색 발화 시.
-        ▸ place(target)           : 지정 위치에 내려놓는다. ★ pick / pick_horizontal 이후에만 사용.
-        ▸ shake()                 : 잡고 있는 물체를 흔든다. ★ pick / pick_horizontal 이후에만 사용.
-        ▸ reset()                 : 홈 포지션으로 복귀한다 (그리퍼 열림). 모든 정상 시퀀스의 종료 동작.
-        [지원 값 (params.target 키로 발행)]
-        - 객체 (한국어 발화 → 영어로 발행):
-          · "사과"   → "apple"   (★ 항상 pick 으로 잡는다)
-          · "후추통" → "shaker"  (★ 항상 pick_horizontal 으로 잡는다)
-        - 위치 (한국어 그대로 발행):
-          · "쓰레기통"
-        [규칙]
-        1. 객체별 잡는 방식은 고정이다. 사용자 발화의 "수직"/"수평"/"가로" 같은 단어와 무관하게:
-           - apple → 항상 pick
-           - shaker → 항상 pick_horizontal
-        2. 모든 정상 시퀀스는 마지막에 reset 으로 종료한다 (단순 홈 복귀 / 단순 finding 발화는 단독).
-        3. 한 시퀀스에 pick / pick_horizontal 은 합쳐 최대 1번.
-        4. params 는 항상 {{"target": ...}} 형식. 액션 자체가 인자 없으면 {{}}.
-        5. 객체는 영어(apple/shaker)로, 위치는 한국어(쓰레기통)로 발행.
-        6. 카탈로그에 없는 액션이나 지원하지 않는 값을 요청하면 sequence 는 [], reply 는 거절 멘트.
-        7. step 번호는 1부터 순차.
-        [예시]
-        사용자: "사과 버려줘"
-        {{"sequence":[{{"step":1,"action":"pick","params":{{"target":"apple"}}}},{{"step":2,"action":"place","params":{{"target":"쓰레기통"}}}},{{"step":3,"action":"reset","params":{{}}}}],"reply":"네, 사과를 쓰레기통에 버리겠습니다."}}
-        사용자: "후추통 잡아"
-        {{"sequence":[{{"step":1,"action":"pick_horizontal","params":{{"target":"shaker"}}}},{{"step":2,"action":"reset","params":{{}}}}],"reply":"네, 후추통을 잡겠습니다."}}
-        사용자: "후추통 흔들어"
-        {{"sequence":[{{"step":1,"action":"pick_horizontal","params":{{"target":"shaker"}}}},{{"step":2,"action":"shake","params":{{}}}},{{"step":3,"action":"reset","params":{{}}}}],"reply":"네, 후추통을 흔들겠습니다."}}
-        사용자: "사과 흔들고 쓰레기통에 버려"
-        {{"sequence":[{{"step":1,"action":"pick","params":{{"target":"apple"}}}},{{"step":2,"action":"shake","params":{{}}}},{{"step":3,"action":"place","params":{{"target":"쓰레기통"}}}},{{"step":4,"action":"reset","params":{{}}}}],"reply":"네, 사과를 흔들고 쓰레기통에 버리겠습니다."}}
-        사용자: "사과 어디있어"
-        {{"sequence":[{{"step":1,"action":"finding","params":{{"target":"apple"}}}}],"reply":"사과를 찾아볼게요."}}
-        사용자: "홈으로 가"
-        {{"sequence":[{{"step":1,"action":"reset","params":{{}}}}],"reply":"네, 홈 포지션으로 복귀하겠습니다."}}
-        사용자: "컵 가져와"
-        {{"sequence":[],"reply":"죄송합니다. 현재는 사과와 후추통만 다룰 수 있어요."}}
-        사용자: "그냥 흔들어"
-        {{"sequence":[],"reply":"어떤 물건을 흔들까요?"}}
-
-        <사용자 입력>
-        "{user_input}"
-        """
+        self.robot_busy = False  # state_manager state != "IDLE" 이면 True
 
         self.llm = ChatOpenAI(
             model=llm_model,
@@ -109,7 +58,7 @@ class VoiceToCommand(Node):
             model_kwargs={"response_format": {"type": "json_object"}},
         )
         self.prompt_template = PromptTemplate(
-            input_variables=["user_input"], template=prompt_content
+            input_variables=["user_input"], template=PROMPT_CONTENT
         )
         self.lang_chain = self.prompt_template | self.llm
         self.stt = STT(openai_api_key=openai_api_key)
@@ -146,8 +95,17 @@ class VoiceToCommand(Node):
             while rclpy.ok():
                 detected = self.wakeup_word.is_wakeup()
                 self._publish_wakeup(detected)
-                if detected:
-                    break
+                if not detected:
+                    continue
+
+                # 로봇 동작 중이면 안내만 하고 wakeup 다시 대기
+                if self.robot_busy:
+                    self.get_logger().warn("⚠️ 로봇 동작 중 - wakeup 무시")
+                    self.reply_pub.publish(String(data="잠시만요, 지금 동작 중입니다."))
+                    time.sleep(3.0)  # TTS 재생 + 마이크 안정화 시간
+                    continue
+
+                break
 
             if not rclpy.ok():
                 break
@@ -202,6 +160,14 @@ class VoiceToCommand(Node):
         }, ensure_ascii=False)
         self.wakeup_pub.publish(msg)
             
+    def _on_status(self, msg):
+        """state_manager 상태 받아서 robot_busy 갱신"""
+        try:
+            data = json.loads(msg.data)
+            self.robot_busy = (data.get("state") != "IDLE")
+        except Exception:
+            pass
+
     def extract_keyword(self, output_message):
         """LLM 응답을 sequence와 reply로 분리"""
         response = self.lang_chain.invoke({"user_input": output_message})
