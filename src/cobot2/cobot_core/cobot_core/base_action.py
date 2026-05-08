@@ -91,6 +91,12 @@ class BaseAction:
             dx = fine_pos[0] - coarse_pos[0]
             dy = fine_pos[1] - coarse_pos[1]
             logger.info(f"✨ 오차 보정 완료 (X: {dx:.1f}mm, Y: {dy:.1f}mm)")
+            
+            # 수직으로 내려다볼 때 금속/반사 재질에 의해 Depth(Z)가 바닥을 뚫고 
+            # 튀는 현상(IR 난반사)을 방지하기 위해, Z 높이는 가장 안전했던 1차 탐지 값을 유지합니다.
+            if fine_pos[2] <= 30:
+                fine_pos[2] = coarse_pos[2]
+            
             return fine_pos
         else:
             logger.warn("⚠️ 2차 탐지 실패. 1차 좌표로 강행합니다.")
