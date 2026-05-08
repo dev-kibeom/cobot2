@@ -1,7 +1,7 @@
 from ..base_action import BaseAction
 
-class Push(BaseAction):
-    action_name = 'push'
+class Tap(BaseAction):
+    action_name = 'tap'
 
     def execute(self,target=None):
 
