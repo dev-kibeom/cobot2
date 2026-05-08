@@ -12,15 +12,17 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from command.action import Command
 from cobot_core.action_manager import ActionManager
 
+# 로봇 설정 상수
+ROBOT_ID = "dsr01"
+ROBOT_MODEL = "m0609"
+ROBOT_TOOL = "Tool Weight"
+ROBOT_TCP = "GripperDA_v1"
+
 class CommandExecuter(Node):
   def __init__(self):
     super().__init__('command_executer')
     
     # 파라미터 선언 및 기본값 설정
-    self.declare_parameter('robot_id', 'dsr01')
-    self.declare_parameter('robot_model', 'm0609')
-    self.declare_parameter('robot_tool', 'Tool Weight')
-    self.declare_parameter('robot_tcp', 'GripperDA_v1')
     self.declare_parameter('vel_linear', 200.0)
     self.declare_parameter('acc_linear', 50.0)
     self.declare_parameter('vel_angular', 70.0)
@@ -53,16 +55,16 @@ class CommandExecuter(Node):
 
     # Tool과 TCP 설정시 매뉴얼 모드로 변경해서 진행
     set_robot_mode(ROBOT_MODE_MANUAL)
-    set_tool(self.robot_tool)
-    set_tcp(self.robot_tcp)
+    set_tool(ROBOT_TOOL)
+    set_tcp(ROBOT_TCP)
     set_robot_mode(ROBOT_MODE_AUTONOMOUS)
     time.sleep(2)  # 설정 안정화를 위해 잠시 대기
     
     # 설정된 상수 출력
     print("#" * 50)
     print("Initializing robot with the following settings:")
-    print(f"ROBOT_ID: {self.robot_id}")
-    print(f"ROBOT_MODEL: {self.robot_model}")
+    print(f"ROBOT_ID: {ROBOT_ID}")
+    print(f"ROBOT_MODEL: {ROBOT_MODEL}")
     print(f"ROBOT_TCP: {get_tcp()}") 
     print(f"ROBOT_TOOL: {get_tool()}")
     print(f"ROBOT_MODE 0:수동, 1:자동 : {get_robot_mode()}")
@@ -125,11 +127,6 @@ class CommandExecuter(Node):
   
   def _update_local_parameters(self):
     """현재 노드의 파라미터 값을 멤버 변수로 동기화"""
-    self.robot_id = self.get_parameter('robot_id').value
-    self.robot_model = self.get_parameter('robot_model').value
-    self.robot_tool = self.get_parameter('robot_tool').value
-    self.robot_tcp = self.get_parameter('robot_tcp').value
-    
     self.vel_linear = self.get_parameter('vel_linear').value
     self.acc_linear = self.get_parameter('acc_linear').value
     self.vel_angular = self.get_parameter('vel_angular').value
@@ -169,18 +166,18 @@ class CommandExecuter(Node):
 def main(args=None):
     rclpy.init(args=args)
     
-    temp_node = Node('command_executer')
-    temp_node.declare_parameter('robot_id', 'dsr01')
-    temp_node.declare_parameter('robot_model', 'm0609')
-    robot_id = temp_node.get_parameter('robot_id').value
-    robot_model = temp_node.get_parameter('robot_model').value
-    temp_node.destroy_node()
-    
-    import DR_init
-    DR_init.__dsr__id = robot_id
-    DR_init.__dsr__model = robot_model
-    dsr_node = Node('dsr_helper_node', namespace=robot_id)
+    DR_init.__dsr__id = ROBOT_ID
+    DR_init.__dsr__model = ROBOT_MODEL
+
+    # DSR 내부 통신을 전담할 더미헬퍼 노드
+    dsr_node = Node('dsr_helper_node', namespace=ROBOT_ID)
     DR_init.__dsr__node = dsr_node
+    
+    try:
+      # 전역적으로 DSR_ROBOT2 로드 시도
+      import DSR_ROBOT2
+    except Exception as e:
+      print(f"DSR_ROBOT2 Load Error: {e}")
     
     node = CommandExecuter()
     
