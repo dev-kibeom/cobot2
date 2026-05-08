@@ -45,7 +45,7 @@ class YoloModel:
 
         while len(frames) < target_count and time.time() < end_time:
             # 큐에 쌓인 콜백을 처리 (timeout 0.1초 주어 CPU 점유율 하락 방지)
-            rclpy.spin_once(img_node, timeout_sec=0.1)
+            # rclpy.spin_once(img_node, timeout_sec=0.1)
             
             frame = img_node.get_color_frame()
             stamp = img_node.get_color_frame_stamp()
@@ -54,7 +54,7 @@ class YoloModel:
             if frame is not None and stamp not in frames:
                 frames[stamp] = frame
             
-            # time.sleep(0.01) -> 기존의 인자없는 논블로킹 spin_once와 강제휴식
+            time.sleep(0.01)
 
         if not frames:
             print(f"No frames captured within {timeout} seconds.")
@@ -63,7 +63,7 @@ class YoloModel:
         return list(frames.values())
 
     def get_best_detection(self, img_node, target):
-        rclpy.spin_once(img_node)
+        #rclpy.spin_once(img_node)
         frames = self.get_frames(img_node)
         if not frames:  # Check if frames are empty
             return None

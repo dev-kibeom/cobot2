@@ -6,6 +6,8 @@ import json
 from rclpy.node import Node
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.executors import MultiThreadedExecutor
+from rcl_interfaces.msg import SetParametersResult
+from rclpy.callback_groups import ReentrantCallbackGroup
 
 from command.action import Command
 from cobot_core.action_manager import ActionManager
@@ -19,8 +21,6 @@ class CommandExecuter(Node):
     self.declare_parameter('robot_model', 'm0609')
     self.declare_parameter('robot_tool', 'Tool Weight')
     self.declare_parameter('robot_tcp', 'GripperDA_v1')
-    
-    # ActionManager 등으로 넘겨줄 변수들
     self.declare_parameter('vel_linear', 200.0)
     self.declare_parameter('acc_linear', 50.0)
     self.declare_parameter('vel_angular', 70.0)
@@ -28,13 +28,12 @@ class CommandExecuter(Node):
     self.declare_parameter('depth_offset', -35.0)
     self.declare_parameter('min_depth', 20.0)
         
-    # YAML 파일(또는 런타임)에서 값 읽어오기
-    self.robot_id = self.get_parameter('robot_id').value
-    self.robot_model = self.get_parameter('robot_model').value
-    self.robot_tool = self.get_parameter('robot_tool').value
-    self.robot_tcp = self.get_parameter('robot_tcp').value
+    self._update_local_parameters()
+    
+    self.add_on_set_parameters_callback(self.parameter_update_callback)
     
     self.action_manager = ActionManager(node=self)
+    self.action_cb_group = ReentrantCallbackGroup()
     
     self._action_server = ActionServer(
       self,
@@ -42,7 +41,8 @@ class CommandExecuter(Node):
       'execute_command',
       execute_callback=self.execute_callback,
       goal_callback=self.goal_callback,
-      cancel_callback=self.cancel_callback
+      cancel_callback=self.cancel_callback,
+      callback_group=self.action_cb_group
     )
     self.get_logger().info("🚀 Action Server Ready.")
     
@@ -122,19 +122,74 @@ class CommandExecuter(Node):
     result.success = True
     result.message = "Completed Successfully"
     return result
-      
-
+  
+  def _update_local_parameters(self):
+    """현재 노드의 파라미터 값을 멤버 변수로 동기화"""
+    self.robot_id = self.get_parameter('robot_id').value
+    self.robot_model = self.get_parameter('robot_model').value
+    self.robot_tool = self.get_parameter('robot_tool').value
+    self.robot_tcp = self.get_parameter('robot_tcp').value
+    
+    self.vel_linear = self.get_parameter('vel_linear').value
+    self.acc_linear = self.get_parameter('acc_linear').value
+    self.vel_angular = self.get_parameter('vel_angular').value
+    self.acc_angular = self.get_parameter('acc_angular').value
+    self.depth_offset = self.get_parameter('depth_offset').value
+    self.min_depth = self.get_parameter('min_depth').value
+        
+  def parameter_update_callback(self, params):
+    """rqt 등 외부에서 파라미터 변경 시 호출되는 콜백"""
+    success = True
+    for param in params:
+        # 1. 값 검증 (예: 속도는 0보다 커야 함)
+        if param.name in ['vel_linear', 'vel_angular', 'acc_linear', 'acc_angular']:
+            if param.value <= 0:
+                self.get_logger().warn(f"🚫 {param.name}은 0보다 커야 합니다. 변경을 거부합니다.")
+                success = False
+                continue
+        
+        # 2. 실시간 변수 업데이트
+        if param.name == 'vel_linear':
+            self.vel_linear = param.value
+        elif param.name == 'acc_linear':
+            self.acc_linear = param.value
+        elif param.name == 'vel_angular':
+            self.vel_angular = param.value
+        elif param.name == 'acc_angular':
+            self.acc_angular = param.value
+        elif param.name == 'depth_offset':
+            self.depth_offset = param.value
+        elif param.name == 'min_depth':
+            self.min_depth = param.value
+            
+        self.get_logger().info(f"⚙️ 파라미터 변경 완료: {param.name} -> {param.value}")
+        
+    return SetParametersResult(successful=success)
+    
 def main(args=None):
     rclpy.init(args=args)
     
+    temp_node = Node('command_executer')
+    temp_node.declare_parameter('robot_id', 'dsr01')
+    temp_node.declare_parameter('robot_model', 'm0609')
+    robot_id = temp_node.get_parameter('robot_id').value
+    robot_model = temp_node.get_parameter('robot_model').value
+    temp_node.destroy_node()
+    
+    import DR_init
+    DR_init.__dsr__id = robot_id
+    DR_init.__dsr__model = robot_model
+    dsr_node = Node('dsr_helper_node', namespace=robot_id)
+    DR_init.__dsr__node = dsr_node
+    
     node = CommandExecuter()
     
-    DR_init.__dsr__id = node.robot_id
-    DR_init.__dsr__model = node.robot_model
+    # DR_init.__dsr__id = node.robot_id
+    # DR_init.__dsr__model = node.robot_model
 
-    # DSR 내부 통신을 전담할 더미헬퍼 노드
-    dsr_node = Node('dsr_helper_node', namespace=node.robot_id)
-    DR_init.__dsr__node = dsr_node
+    # # DSR 내부 통신을 전담할 더미헬퍼 노드
+    # dsr_node = Node('dsr_helper_node', namespace=node.robot_id)
+    # DR_init.__dsr__node = dsr_node
     
     try:
       # 전역적으로 DSR_ROBOT2 로드 시도
@@ -143,9 +198,7 @@ def main(args=None):
     except Exception as e:
       print(f"DSR_ROBOT2 Load Error: {e}")
       
-    executor = MultiThreadedExecutor(num_threads=4)
-    node = CommandExecuter()
-    
+    executor = MultiThreadedExecutor(num_threads=4)   
     executor.add_node(dsr_node)
     executor.add_node(node)
     

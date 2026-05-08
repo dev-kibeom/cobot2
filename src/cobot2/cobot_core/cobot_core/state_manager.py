@@ -183,9 +183,7 @@ class StateManager(Node):
             "params": {}, 
             "desc": "에러 복구 원점 회귀"
             }]
-        
-        self.send_goal_to_executer(reset_sequence, is_recovery=True)
-        
+                
         self.state = "RECOVERING_RESET"
         self.publish_status(error_msg="최대 재시도 초과. 안전을 위해 원점 복구를 진행합니다.")
         self.send_goal_to_executer(reset_sequence, is_recovery=True)

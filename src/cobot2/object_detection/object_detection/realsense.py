@@ -1,7 +1,7 @@
 from rclpy.node import Node
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
-
+from rclpy.qos import qos_profile_sensor_data
 
 class ImgNode(Node):
     def __init__(self):
@@ -14,9 +14,9 @@ class ImgNode(Node):
         self.color_subscription = self.create_subscription(
             Image, '/camera/camera/color/image_raw', self.color_callback, 10)
         self.depth_subscription = self.create_subscription(
-            Image, '/camera/camera/aligned_depth_to_color/image_raw', self.depth_callback, 10)
+            Image, '/camera/camera/aligned_depth_to_color/image_raw', self.depth_callback, qos_profile_sensor_data)
         self.camera_info_subscription = self.create_subscription(
-            CameraInfo, '/camera/camera/color/camera_info', self.camera_info_callback, 10)
+            CameraInfo, '/camera/camera/color/camera_info', self.camera_info_callback, qos_profile_sensor_data)
         self.get_logger().info("Waiting for client's call...")
 
     def camera_info_callback(self, msg):
