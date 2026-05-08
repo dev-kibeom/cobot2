@@ -22,10 +22,10 @@ class Pour(BaseAction):
         # 붓는 위치로 이동
         if not self.manager.perform('movel', pos=[pos[0],pos[1],pos[2]+150,pos[3],pos[4],pos[5]],vel=100,acc=100): return False
         
-        current_pos = self.get_current_posx()
-
-        if not self.manager.perform('movel', pos=[current_pos[0],current_pos[1],current_pos[2],current_pos[3],current_pos[4],current_pos[5]], 
-        vel=100, acc=100, mode='abs', ref='base'): return False
+        # current_pos = self.get_current_posx()
+        # if not self.manager.perform('movel', pos=[current_pos[0],current_pos[1],current_pos[2],current_pos[3],current_pos[4],current_pos[5]], 
+        # vel=100, acc=100, mode='abs', ref='base'): return False
+        if not self.manager.perform('movej', joint=[0,0,0,0,0,0], vel=100,acc=100, mode='rel'): return False
 
         # 부을 때 까지 대기
         if not self.manager.perform('wait', time=3): return False
