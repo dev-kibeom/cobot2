@@ -77,11 +77,11 @@ class TestVoiceCommand(Node):
             #     "params": {'target':'shaker'},
             #     "desc": 'pour'
             # },
-            # {
-            #     "action": "reset",
-            #     "params": {},
-            #     "desc": "reset",
-            # }
+            {
+                "action": "reset",
+                "params": {},
+                "desc": "reset",
+            }
         ]
 
         msg = String()

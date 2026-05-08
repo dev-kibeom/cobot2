@@ -30,7 +30,7 @@ class PickHorizontal(BaseAction):
         # 4. 수평 접근 및 그립
         # ==========================================
         # 비틀어진 각도를 유지하며 수직 하강
-        grip_pos = [tx, ty, tz - 30.0, final_rx, final_ry, final_rz]
+        grip_pos = [tx, ty, tz - 40.0, final_rx, final_ry, final_rz]
         if not self.manager.perform('movel', pos=grip_pos, mode='abs'): return False
 
         if not self.manager.perform('gripper_close'): return False

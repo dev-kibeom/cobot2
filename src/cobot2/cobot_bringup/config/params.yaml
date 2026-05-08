@@ -11,7 +11,7 @@ command_executer:
     
     # 그리퍼 조작 관련 높이 (action_manager.py)
     depth_offset: -35.0  # 타겟 앞까지 접근하는 거리 (mm)
-    min_depth: 30.0      # 바닥 충돌 방지 최소 높이 (mm)
+    min_depth: 50.0      # 바닥 충돌 방지 최소 높이 (mm)
 
 # -----------------------------------------------
 # 2. 상태 및 에러 복구 파라미터 (state_manager)
