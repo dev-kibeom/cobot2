@@ -38,6 +38,64 @@ class BaseAction:
     def execute(self, **kwargs):
         raise NotImplementedError
     
+    def coarse_to_fine(self, target, z_offset=250.0):
+        """2-Step Visual Servoing: 1차 탐지 -> 카메라 렌즈를 타겟 정상공에 정렬 -> 2차 정밀 탐지"""
+        logger = self.manager.node.get_logger()
+        
+        # 1차 탐지
+        logger.info(f"🔍 [1차 탐지] '{target}' 위치 파악")
+        coarse_pos = self.manager.get_vision_target(target)
+        
+        if not coarse_pos:
+            logger.warn(f"⚠️ '{target}' 미발견. 주변 스캔을 시작합니다.")
+            if not self.manager.perform('finding', target=target):
+                return None
+            coarse_pos = self.manager.target_pos
+            if not coarse_pos: return None
+            
+        tx, ty, tz, rx, ry, rz = coarse_pos
+        
+        # =========================================================
+        # Hand-Eye 오프셋 역산 (Camera Centering)
+        # =========================================================
+        # 현재 로봇 자세를 읽어와 Base 좌표계 기준 카메라의 정확한 절대 위치를 구합니다.
+        current_pos = self.get_current_posx()
+        x, y, z, crx, cry, crz = current_pos
+        
+        base2gripper = self.manager.get_robot_pose_matrix(x, y, z, crx, cry, crz)
+        base2cam = base2gripper @ self.manager.T_gripper2cam
+        
+        # TCP(그리퍼)와 Camera 간의 물리적 위치 차이 (Offset)
+        offset_x = base2cam[0, 3] - x
+        offset_y = base2cam[1, 3] - y
+        offset_z = base2cam[2, 3] - z
+        
+        # 그리퍼가 아닌 '카메라 렌즈'가 타겟(tx, ty) 바로 위(z_offset)에 오도록 그리퍼의 목표 지점을 역산!
+        cam_hover_x = tx - offset_x
+        cam_hover_y = ty - offset_y
+        cam_hover_z = (tz + z_offset) - offset_z
+
+        # 타겟 상공(Hover)으로 이동
+        logger.info(f"🚁 [Hovering] 카메라 렌즈를 타겟 중앙 상공 {z_offset}mm에 정렬합니다.")
+        approach_pos = [cam_hover_x, cam_hover_y, cam_hover_z, rx, ry, rz]
+        
+        if not self.manager.perform('movel', pos=approach_pos, mode='abs'): return None
+        
+        self.wait(0.5) # 카메라 흔들림 안정화 대기
+        
+        # 2차 정밀 탐지
+        logger.info("🎯 [2차 정밀 탐지] 영점 조정")
+        fine_pos = self.manager.get_vision_target(target)
+        
+        if fine_pos:
+            dx = fine_pos[0] - coarse_pos[0]
+            dy = fine_pos[1] - coarse_pos[1]
+            logger.info(f"✨ 오차 보정 완료 (X: {dx:.1f}mm, Y: {dy:.1f}mm)")
+            return fine_pos
+        else:
+            logger.warn("⚠️ 2차 탐지 실패. 1차 좌표로 강행합니다.")
+            return coarse_pos
+    
     # ── 저수준 동작 래핑 (기본 기능) ──
     def movel(self, pos, vel=None, acc=None, time=0, radius=0, mode='abs', ref='base'):
         v = vel if vel is not None else self.vel_linear
