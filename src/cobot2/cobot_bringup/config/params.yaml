@@ -3,12 +3,6 @@
 # -----------------------------------------------
 command_executer:
   ros__parameters:
-    # 하드웨어 세팅
-    robot_id: "dsr01"
-    robot_model: "m0609"
-    robot_tool: "Tool Weight"
-    robot_tcp: "GripperDA_v1"
-    
     # 기본 이동 속도 및 가속도 (base_action.py)
     vel_linear: 200.0
     acc_linear: 50.0
