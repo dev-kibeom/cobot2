@@ -17,66 +17,71 @@ class TestVoiceCommand(Node):
                 "params": {},
                 "desc": "reset",
             },
+            # # {
+            # #     "action": "pick",
+            # #     "params": {'target':'shaker'},
+            # #     "desc": "pick",
+            # # },
+            # # {
+            # #     "action": "reset",
+            # #     "params": {},
+            # #     "desc": "reset",
+            # # },
+            # {
+            #     "action": "tap",
+            #     "params": {'target':'shaker'},
+            #     "desc": "tap",
+            # },
+            # {
+            #     "action": "reset",
+            #     "params": {},
+            #     "desc": "reset",
+            # },
+            # {
+            #     "action": "hello_bot",
+            #     "params": {},
+            #     "desc": "hello_bot",
+            # },
             {
-                "action": "pick",
-                "params": {'target':'shaker'},
-                "desc": "pick",
+                "action": "movej",
+                "params": {'joint':[0, 0, 110, 90, 0, 0], 'vel':100, 'acc':100, 'mode':'abs'},
+                "desc": "movej",
             },
             {
-                "action": "reset",
-                "params": {},
-                "desc": "reset",
+                "action": "movel",
+                "params": {'pos':[550, 0, 40, 0, 0, 0], 'vel':100, 'acc':100, 'mode':'abs'},
+                "desc": "movel",
             },
-            {
-                "action": "tap",
-                "params": {'target':'shaker'},
-                "desc": "tap",
-            },
-            {
-                "action": "reset",
-                "params": {},
-                "desc": "reset",
-            },
-            {
-                "action": "hello_bot",
-                "params": {},
-                "desc": "hello_bot",
-            },
-            {
-                "action": "reset",
-                "params": {},
-                "desc": "reset",
-            },
-            {
-                "action": "pick_horizontal",
-                "params": {'target':'shaker'},
-                "desc": "pick_horizontal",
-            },
-            {
-                "action": "reset",
-                "params": {},
-                "desc": "reset",
-            },
-            {
-                "action": "pick_side",
-                "params": {'target':'shaker'},
-                "desc": "pick_side",
-            },
-            {
-                "action": "reset",
-                "params": {},
-                "desc": "reset",
-            },
-            {
-                "action": "pour",
-                "params": {'target':'shaker'},
-                "desc": 'pour'
-            },
-            {
-                "action": "reset",
-                "params": {},
-                "desc": "reset",
-            }
+            # {
+            #     "action": "pick_horizontal",
+            #     "params": {'target':'shaker'},
+            #     "desc": "pick_horizontal",
+            # },
+            # {
+            #     "action": "reset",
+            #     "params": {},
+            #     "desc": "reset",
+            # },
+            # {
+            #     "action": "pick_side",
+            #     "params": {'target':'shaker'},
+            #     "desc": "pick_side",
+            # },
+            # {
+            #     "action": "reset",
+            #     "params": {},
+            #     "desc": "reset",
+            # },
+            # {
+            #     "action": "pour",
+            #     "params": {'target':'shaker'},
+            #     "desc": 'pour'
+            # },
+            # {
+            #     "action": "reset",
+            #     "params": {},
+            #     "desc": "reset",
+            # }
         ]
 
         msg = String()

@@ -4,17 +4,19 @@ class Tap(BaseAction):
     action_name = 'tap'
 
     def execute(self,target=None):
-
-        if not target:
-            print("❌ 타겟이 지정되지 않았습니다.")
-            return False
-        
         pos = self.manager.get_vision_target(target)
-        
-        if not pos:
-            self.manager.perform('finding', target=target)
-            return False
 
+        if not pos:
+            if not self.manager.perform('finding', target=target):
+                print(f"❌ '{target}' finding 실패")
+                return False
+
+            pos = self.manager.target_pos
+
+            if not pos:
+                print(f"❌ '{target}' finding 후에도 좌표가 없습니다.")
+                return False
+                
         tx, ty, tz, rx, ry, rz = pos
 
         if not self.manager.perform('movel', pos=[tx, ty, tz+100, rx, ry, rz], vel=100, acc=100, mode='abs'): return False

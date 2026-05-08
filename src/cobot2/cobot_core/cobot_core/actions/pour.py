@@ -7,10 +7,18 @@ class Pour(BaseAction):
 
     def execute(self):
         pos = self.manager.get_vision_target(target)
-        if not pos:
-            self.manager.perform('finding', target=target)
-            return False
 
+        if not pos:
+            if not self.manager.perform('finding', target=target):
+                print(f"❌ '{target}' finding 실패")
+                return False
+
+            pos = self.manager.target_pos
+
+            if not pos:
+                print(f"❌ '{target}' finding 후에도 좌표가 없습니다.")
+                return False
+                
         # 붓는 위치로 이동
         if not self.manager.perform('movel', pos=pos,vel=100,acc=100): return False
         

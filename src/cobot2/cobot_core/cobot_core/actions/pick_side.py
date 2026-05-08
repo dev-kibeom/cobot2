@@ -4,18 +4,19 @@ class Pick_side(BaseAction):
     action_name = 'pick_side'
 
     def execute(self, target=None):
-        if not target:
-            print("❌ 타겟이 지정되지 않았습니다.")
-            return False
-        
-        # 👁️ 비전 탐색: "타겟"의 픽업용 3D 좌표
         pos = self.manager.get_vision_target(target)
-        if not pos: 
-            self.manager.perform('finding', target=target)
-            return False
-        
-        # pos = self.get_current_posx
-        pos = self.manager.target_pos
+
+        if not pos:
+            if not self.manager.perform('finding', target=target):
+                print(f"❌ '{target}' finding 실패")
+                return False
+
+            pos = self.manager.target_pos
+
+            if not pos:
+                print(f"❌ '{target}' finding 후에도 좌표가 없습니다.")
+                return False
+
         
         tx, ty, tz, rx, ry, rz = pos
         print(f"🍎 '{target}' 좌표({tx:.1f}, {ty:.1f}, {tz:.1f})로 Pick 시퀀스를 시작합니다.")
