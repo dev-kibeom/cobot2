@@ -46,7 +46,7 @@ class Pick_horizontal(BaseAction):
         if not self.manager.perform('movel', pos=approach_pos, mode='abs'): return False
 
         # 움켜쥐기 위해 하강: 표면 좌표보다 살짝 깊게 들어가서 꽉 쥠
-        grip_pos = [tx, ty, tz - 75, rx, ry, rz]
+        grip_pos = [tx, ty, tz - 30, rx, ry, rz]
         if not self.manager.perform('movel', pos=grip_pos, mode='abs'): return False
 
         # 잡기
