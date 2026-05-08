@@ -17,44 +17,66 @@ class TestVoiceCommand(Node):
                 "params": {},
                 "desc": "reset",
             },
-            
             {
-                "action": "movej",
-                "params": {'joint':[0,10,120,-180,120,90], 'vel':150, 'acc':150, 'mode':'abs'},
+                "action": "pick",
+                "params": {'target':'shaker'},
+                "desc": "pick",
+            },
+            {
+                "action": "reset",
+                "params": {},
+                "desc": "reset",
+            },
+            {
+                "action": "tap",
+                "params": {'target':'shaker'},
+                "desc": "tap",
+            },
+            {
+                "action": "reset",
+                "params": {},
+                "desc": "reset",
+            },
+            {
+                "action": "hello_bot",
+                "params": {},
+                "desc": "hello_bot",
+            },
+            {
+                "action": "reset",
+                "params": {},
+                "desc": "reset",
+            },
+            {
+                "action": "pick_horizontal",
+                "params": {'target':'shaker'},
                 "desc": "pick_horizontal",
             },
             {
-                "action": "periodic",
-                "params": {'amp':[0, 0, 0, 10, 0, 0], 'period':[0, 0, 0, 1, 0, 0], 'repeat':2},
-                "desc": "pick_horizontal",
+                "action": "reset",
+                "params": {},
+                "desc": "reset",
             },
-            # {
-            #     "action": "pick_horizontal",
-            #     "params": {'target':'shaker'},
-            #     "desc": "pick_horizontal",
-            # },
-            # {
-            #     "action": "pour",
-            #     "params": {},
-            #     "desc": "붓기",
-            # },
-            # {
-            #     "action": "pick_horizontal",
-            #     "params": {'target':'shaker'
-            #         },
-            #     "desc": '잡기'
-            # },
-            # {
-            #     "action": "shake",
-            #     "params": {
-            #         },
-            #     'decs' : '흔들기'
-            # },
-            # {
-            #     "action": "reset",
-            #     "params": {},
-            #     "desc": "reset",
-            # }
+            {
+                "action": "pick_side",
+                "params": {'target':'shaker'},
+                "desc": "pick_side",
+            },
+            {
+                "action": "reset",
+                "params": {},
+                "desc": "reset",
+            },
+            {
+                "action": "pour",
+                "params": {'target':'shaker'},
+                "desc": 'pour'
+            },
+            {
+                "action": "reset",
+                "params": {},
+                "desc": "reset",
+            }
         ]
 
         msg = String()

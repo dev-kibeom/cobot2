@@ -24,7 +24,7 @@ class Pick_horizontal(BaseAction):
         if ty < 0:
             if not self.manager.perform('movej', joint=([0,0,0,110,-180,0]), vel = 100, acc = 100, mode = 'rel'): return False
         if tx > 550:
-            if not self.manager.perform('movej', joint=([0,0,20,90,-90,0]), vel=100, acc=100, mode ='rel'): return False
+            if not self.manager.perform('movej', joint=([0,0,0,0,-70,-90]), vel=100, acc=100, mode ='rel'): return False
         current_pos = self.get_current_posx()
 
         rx = current_pos[3]
@@ -42,7 +42,7 @@ class Pick_horizontal(BaseAction):
         if not self.manager.perform('gripper_close'): return False
 
         # 들어 올리기: 다시 안전 높이로 상승
-        lift_pos = [tx, ty, tz + 100.0, rx, ry, rz]
+        lift_pos = [tx, ty, tz + 125.0, rx, ry, rz]
         if not self.manager.perform('movel', pos=lift_pos, mode='abs'): return False
 
         return True

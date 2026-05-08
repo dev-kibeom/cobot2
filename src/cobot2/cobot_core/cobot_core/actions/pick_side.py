@@ -14,6 +14,7 @@ class Pick_side(BaseAction):
             self.manager.perform('finding', target=target)
             return False
         
+        # pos = self.get_current_posx
         pos = self.manager.target_pos
         
         tx, ty, tz, rx, ry, rz = pos

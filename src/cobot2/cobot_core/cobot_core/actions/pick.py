@@ -33,7 +33,7 @@ class Pick(BaseAction):
         if not self.manager.perform('gripper_close'): return False
         
         # 들어 올리기: 다시 안전 높이로 상승
-        lift_pos = [tx, ty, tz + 150.0, rx, ry, rz]
+        lift_pos = [tx, ty, tz + 70.0, rx, ry, rz]
         if not self.manager.perform('movel', pos=lift_pos, mode='abs'): return False
 
         return True

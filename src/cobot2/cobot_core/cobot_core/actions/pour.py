@@ -6,13 +6,13 @@ class Pour(BaseAction):
     action_name = 'pour'
 
     def execute(self):
-        # pos = self.manager.get_vision_target(target)
-        # if not pos:
-        #     self.manager.perform('finding', target=target)
-        #     return False
+        pos = self.manager.get_vision_target(target)
+        if not pos:
+            self.manager.perform('finding', target=target)
+            return False
 
-        # # 붓는 위치로 이동
-        # if not self.manager.perform('movel', pos=pos,vel=100,acc=100): return False
+        # 붓는 위치로 이동
+        if not self.manager.perform('movel', pos=pos,vel=100,acc=100): return False
         
         pos = self.get_current_posx()
         if not self.manager.perform('amovel', pos=[pos[0],pos[1],pos[2]-100,pos[3],pos[4],pos[5]], 
