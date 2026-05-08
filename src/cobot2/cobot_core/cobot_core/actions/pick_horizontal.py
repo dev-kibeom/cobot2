@@ -9,39 +9,8 @@ class PickHorizontal(BaseAction):
 
         if not target: return False
 
-        # ==========================================
-        # 1. 1차 탐지 및 Search 연계
-        # ==========================================
-        coarse_pos = self.manager.get_vision_target(target)
-        if not coarse_pos:
-            logger.warn(f"⚠️ '{target}' 미발견. 주변 스캔을 시작합니다.")
-            if not self.manager.perform('finding', target=target): return False
-            coarse_pos = self.manager.get_vision_target(target)
-            if not coarse_pos: return False
-
-        tx, ty, tz, rx, ry, rz = coarse_pos
-        if not self.manager.perform('gripper_open'): return False
-
-        # ==========================================
-        # 2. Hover 및 2차 정밀 탐지 (손목 비틀기 전!)
-        # ==========================================
-        # 카메라가 물체를 정면으로 볼 수 있도록 타겟 상공(150mm)으로 이동
-        # approach_pos = [tx, ty, tz + 200, rx, ry, rz]
-        # if not self.manager.perform('movel', pos=approach_pos, mode='abs'): return False
-        
-        # self.wait(0.5) # 카메라 안정화
-        
-        # logger.info("🎯 [2차 정밀 탐지] 영점 조정")
-        # fine_pos = self.manager.get_vision_target(target)
-        
-        # if fine_pos:
-        #     dx = fine_pos[0] - coarse_pos[0]
-        #     dy = fine_pos[1] - coarse_pos[1]
-        #     logger.info(f"✨ 오차 보정 완료 (X: {dx:.1f}mm, Y: {dy:.1f}mm)")
-        #     # 보정된 좌표로 덮어쓰기
-        #     tx, ty, tz, rx, ry, rz = fine_pos
-        # else:
-        #     logger.warn("⚠️ 2차 탐지 실패. 1차 좌표로 강행합니다.")
+        fine_pos = self.coarse_to_fine(target, z_offset=200)
+        tx, ty, tz, _, _, _ = fine_pos
 
         # ==========================================
         # 3. 손목 비틀기 (MoveJ) 및 자세 업데이트
