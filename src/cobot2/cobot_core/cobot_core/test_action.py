@@ -17,16 +17,16 @@ class TestVoiceCommand(Node):
                 "params": {},
                 "desc": "reset",
             },
-            # {
-            #     "action": "pick_horizontal",
-            #     "params": {'target':'shaker'},
-            #     "desc": "pick_horizontal",
-            # },
             {
-                "action": "pour",
-                "params": {},
-                "desc": "붓기",
+                "action": "periodic",
+                "params": {'amp':[0, 0, 5, 0, 0, 0], 'period':[0, 0, 0.5, 0, 0, 0], 'repeat':2},
+                "desc": "pick_horizontal",
             },
+            # {
+            #     "action": "pour",
+            #     "params": {},
+            #     "desc": "붓기",
+            # },
             # {
             #     "action": "pick_horizontal",
             #     "params": {'target':'shaker'

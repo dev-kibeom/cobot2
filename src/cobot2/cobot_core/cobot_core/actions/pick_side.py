@@ -1,48 +1,39 @@
 from ..base_action import BaseAction
 
-class Pick_horizontal(BaseAction):
-    action_name = 'pick_horizontal'
+class Pick_side(BaseAction):
+    action_name = 'pick_side'
 
     def execute(self, target=None):
         if not target:
             print("❌ 타겟이 지정되지 않았습니다.")
             return False
-
-        # 👁️ 비전 탐색: "타겟"의 픽업용 3D 좌표 (기존 height의 오프셋 설정은 action_manager의 DEPTH_OFFSET 참고)
+        
+        # 👁️ 비전 탐색: "타겟"의 픽업용 3D 좌표
         pos = self.manager.get_vision_target(target)
-        if not pos:
+        if not pos: 
             self.manager.perform('finding', target=target)
             return False
-
+        
+        pos = self.manager.target_pos
+        
         tx, ty, tz, rx, ry, rz = pos
         print(f"🍎 '{target}' 좌표({tx:.1f}, {ty:.1f}, {tz:.1f})로 Pick 시퀀스를 시작합니다.")
-
+        
         if not self.manager.perform('gripper_open'): return False
 
-        if ty >= 0:
-            if not self.manager.perform('movej', joint=([0,0,0,70,0,0]), vel = 100, acc = 100, mode = 'rel'): return False
-        if ty < 0:
-            if not self.manager.perform('movej', joint=([0,0,0,110,-180,0]), vel = 100, acc = 100, mode = 'rel'): return False
-        if tx > 550:
-            if not self.manager.perform('movej', joint=([0,0,20,90,-90,0]), vel=100, acc=100, mode ='rel'): return False
-        current_pos = self.get_current_posx()
-
-        rx = current_pos[3]
-        ry = current_pos[4]
-        rz = current_pos[5]
-        # 어프로치: 사과 바로 위(50mm)로 안전하게 이동
-        approach_pos = [tx, ty, tz + 50.0, rx, ry, rz]
+        # 어프로치: 사과 바로 위(100mm)로 안전하게 이동
+        approach_pos = [tx-60, ty, tz + 100.0, rx, ry, rz]
         if not self.manager.perform('movel', pos=approach_pos, mode='abs'): return False
-
+        
         # 움켜쥐기 위해 하강: 표면 좌표보다 살짝 깊게 들어가서 꽉 쥠
-        grip_pos = [tx, ty, tz - 75.0, rx, ry, rz]
+        grip_pos = [tx-60, ty, tz - 70.0, rx, ry, rz]
         if not self.manager.perform('movel', pos=grip_pos, mode='abs'): return False
-
+        
         # 잡기
         if not self.manager.perform('gripper_close'): return False
-
+        
         # 들어 올리기: 다시 안전 높이로 상승
-        lift_pos = [tx, ty, tz + 100.0, rx, ry, rz]
+        lift_pos = [tx-60, ty, tz + 100.0, rx, ry, rz]
         if not self.manager.perform('movel', pos=lift_pos, mode='abs'): return False
 
         return True
