@@ -52,11 +52,11 @@ class TestVoiceCommand(Node):
             #     "params": {'pos':[550, 0, 40, 0, 0, 0], 'vel':100, 'acc':100, 'mode':'abs'},
             #     "desc": "movel",
             # },
-            # {
-            #     "action": "pick_horizontal",
-            #     "params": {'target':'shaker'},
-            #     "desc": "pick_horizontal",
-            # },
+            {
+                "action": "pick_horizontal",
+                "params": {'target':'shaker'},
+                "desc": "pick_horizontal",
+            },
             # # {
             #     "action": "reset",
             #     "params": {},
@@ -72,11 +72,11 @@ class TestVoiceCommand(Node):
             #     "params": {},
             #     "desc": "reset",
             # },
-            {
-                "action": "pour",
-                "params": {'target':'shaker'},
-                "desc": 'pour'
-            },
+            # {
+            #     "action": "pour",
+            #     "params": {'target':'shaker'},
+            #     "desc": 'pour'
+            # },
             # {
             #     "action": "reset",
             #     "params": {},

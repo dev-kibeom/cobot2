@@ -9,7 +9,7 @@ class PickHorizontal(BaseAction):
 
         if not target: return False
 
-        fine_pos = self.coarse_to_fine(target, z_offset=200)
+        fine_pos = self.coarse_to_fine(target, z_offset=300)
         tx, ty, tz, _, _, _ = fine_pos
 
         # ==========================================

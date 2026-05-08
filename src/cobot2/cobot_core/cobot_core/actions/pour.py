@@ -24,7 +24,7 @@ class Pour(BaseAction):
         
         current_pos = self.get_current_posx()
 
-        if not self.manager.perform('movel', pos=[current_pos[0],current_pos[1],current_pos[2]-100,current_pos[3],current_pos[4],current_pos[5]], 
+        if not self.manager.perform('movel', pos=[current_pos[0],current_pos[1],current_pos[2],current_pos[3],current_pos[4],current_pos[5]], 
         vel=100, acc=100, mode='abs', ref='base'): return False
 
         # 부을 때 까지 대기
