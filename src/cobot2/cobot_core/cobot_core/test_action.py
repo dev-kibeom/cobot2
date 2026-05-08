@@ -17,11 +17,22 @@ class TestVoiceCommand(Node):
                 "params": {},
                 "desc": "reset",
             },
+            
             {
-                "action": "periodic",
-                "params": {'amp':[0, 0, 5, 0, 0, 0], 'period':[0, 0, 0.5, 0, 0, 0], 'repeat':2},
+                "action": "movej",
+                "params": {'joint':[0,10,120,-180,120,90], 'vel':150, 'acc':150, 'mode':'abs'},
                 "desc": "pick_horizontal",
             },
+            {
+                "action": "periodic",
+                "params": {'amp':[0, 0, 0, 10, 0, 0], 'period':[0, 0, 0, 1, 0, 0], 'repeat':2},
+                "desc": "pick_horizontal",
+            },
+            # {
+            #     "action": "pick_horizontal",
+            #     "params": {'target':'shaker'},
+            #     "desc": "pick_horizontal",
+            # },
             # {
             #     "action": "pour",
             #     "params": {},
