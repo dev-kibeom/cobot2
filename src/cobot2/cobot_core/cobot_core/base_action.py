@@ -34,6 +34,11 @@ class BaseAction:
     def acc_angular(self):
         current_val = self.manager.node.acc_angular
         return min(current_val, self.LIMIT_ACC_ANGULAR)
+    
+    @property
+    def tilt_angle(self):
+        return self.manager.node.tilt_angle
+    
 
     def execute(self, **kwargs):
         raise NotImplementedError
@@ -47,7 +52,7 @@ class BaseAction:
         coarse_pos = self.manager.get_vision_target(target)
         
         if not coarse_pos:
-            logger.warn(f"⚠️ '{target}' 미발견. 주변 스캔을 시작합니다.")
+            logger.warn(f"⚠️ 1차 탐지 결과:'{target}' 미발견. 주변 스캔을 시작합니다.")
             if not self.manager.perform('finding', target=target):
                 return None
             coarse_pos = self.manager.target_pos
@@ -56,29 +61,25 @@ class BaseAction:
         tx, ty, tz, rx, ry, rz = coarse_pos
         
         # =========================================================
-        # Hand-Eye 오프셋 역산 (Camera Centering)
+        # 틸트 후 오프셋 수학적 역산
         # =========================================================
-        # 현재 로봇 자세를 읽어와 Base 좌표계 기준 카메라의 정확한 절대 위치를 구합니다.
-        current_pos = self.get_current_posx()
-        x, y, z, crx, cry, crz = current_pos
+        # Y축(Pitch)을 파라미터에 설정된 각도만큼 기울입니다.
+        tilt_ry = ry + self.tilt_angle
         
-        base2gripper = self.manager.get_robot_pose_matrix(x, y, z, crx, cry, crz)
-        base2cam = base2gripper @ self.manager.T_gripper2cam
+        dummy_base2gripper = self.manager.get_robot_pose_matrix(0, 0, 0, rx, tilt_ry, rz)
+        cam_offset_matrix = dummy_base2gripper @ self.manager.T_gripper2cam
         
-        # TCP(그리퍼)와 Camera 간의 물리적 위치 차이 (Offset)
-        offset_x = base2cam[0, 3] - x
-        offset_y = base2cam[1, 3] - y
-        offset_z = base2cam[2, 3] - z
+        offset_x = cam_offset_matrix[0, 3]
+        offset_y = cam_offset_matrix[1, 3]
+        offset_z = cam_offset_matrix[2, 3]
         
-        # 그리퍼가 아닌 '카메라 렌즈'가 타겟(tx, ty) 바로 위(z_offset)에 오도록 그리퍼의 목표 지점을 역산!
         cam_hover_x = tx - offset_x
         cam_hover_y = ty - offset_y
         cam_hover_z = (tz + z_offset) - offset_z
 
         # 타겟 상공(Hover)으로 이동
-        logger.info(f"🚁 [Hovering] 카메라 렌즈를 타겟 중앙 상공 {z_offset}mm에 정렬합니다.")
-        approach_pos = [cam_hover_x, cam_hover_y, cam_hover_z, rx, ry, rz]
-        
+        logger.info(f"🚁 [Hovering] {self.tilt_angle}도 틸트 샷을 위해 카메라를 상공 {z_offset}mm에 정렬합니다.")
+        approach_pos = [cam_hover_x, cam_hover_y, cam_hover_z, rx, tilt_ry, rz]
         if not self.manager.perform('movel', pos=approach_pos, mode='abs'): return None
         
         self.wait(0.5) # 카메라 흔들림 안정화 대기

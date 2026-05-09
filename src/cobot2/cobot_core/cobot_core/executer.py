@@ -28,7 +28,8 @@ class CommandExecuter(Node):
     self.declare_parameter('vel_angular', 70.0)
     self.declare_parameter('acc_angular', 70.0)
     self.declare_parameter('depth_offset', -35.0)
-    self.declare_parameter('min_depth', 20.0)
+    self.declare_parameter('min_depth', 30.0)
+    self.declare_parameter('tilt_angle', 5.0)
         
     self._update_local_parameters()
     
@@ -158,6 +159,8 @@ class CommandExecuter(Node):
             self.depth_offset = param.value
         elif param.name == 'min_depth':
             self.min_depth = param.value
+        elif param.name == 'tilt_angle':
+            self.tilt_angle = param.value
             
         self.get_logger().info(f"⚙️ 파라미터 변경 완료: {param.name} -> {param.value}")
         
