@@ -36,6 +36,10 @@ class BaseAction:
         return min(current_val, self.LIMIT_ACC_ANGULAR)
     
     @property
+    def z_offset(self):
+        return self.manager.node.z_offset
+    
+    @property
     def tilt_angle(self):
         return self.manager.node.tilt_angle
     

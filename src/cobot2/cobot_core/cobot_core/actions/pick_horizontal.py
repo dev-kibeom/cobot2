@@ -17,7 +17,7 @@ class PickHorizontal(BaseAction):
         # ==========================================
         # 이제 정밀 좌표(tx, ty, tz)를 얻었으니 손목을 꺾어줍니다.
         if ty >= 0:
-            if not self.manager.perform('movej', joint=([0,0,0,70,0,0]), vel=100, acc=100, mode='rel'): return False
+            if not self.manager.perform('movej', joint=([0,0,90,70,90,0]), vel=100, acc=100, mode='rel'): return False
         else:
             if not self.manager.perform('movej', joint=([0,0,0,110,-180,0]), vel=100, acc=100, mode='rel'): return False
             
@@ -28,7 +28,13 @@ class PickHorizontal(BaseAction):
         # ==========================================
         # 4. 수평 접근 및 그립
         # ==========================================
-        # 비틀어진 각도를 유지하며 수직 하강
+        
+         # 안전 높이에서 증강
+        lift_pos = [tx, ty, tz + 150.0, final_rx, final_ry, final_rz]
+        if not self.manager.perform('movel', pos=lift_pos, mode='abs'): return False
+        
+        # 수직 하강
+        grip_height = tz - self.d
         grip_pos = [tx, ty, tz - 75.0, final_rx, final_ry, final_rz]
         if not self.manager.perform('movel', pos=grip_pos, mode='abs'): return False
 
