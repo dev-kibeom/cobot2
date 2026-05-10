@@ -10,7 +10,7 @@ from rcl_interfaces.msg import SetParametersResult
 from rclpy.callback_groups import ReentrantCallbackGroup
 
 from command.action import Command
-from cobot_core.action_manager import ActionManager
+from cobot_core.actions.action_manager import ActionManager
 
 # 로봇 설정 상수
 ROBOT_ID = "dsr01"
@@ -22,15 +22,20 @@ class CommandExecuter(Node):
   def __init__(self):
     super().__init__('command_executer')
     
-    # 파라미터 선언 및 기본값 설정
+    # 로봇팔 관련 파라미터
     self.declare_parameter('vel_linear', 200.0)
     self.declare_parameter('acc_linear', 50.0)
     self.declare_parameter('vel_angular', 70.0)
     self.declare_parameter('acc_angular', 70.0)
-    self.declare_parameter('depth_offset', -35.0)
+
+    # 그리퍼 관련 파라미터
+    self.declare_parameter('gripper_ip', '192.168.137.2') # 실제 할당된 IP로 변경 필요
+    self.declare_parameter('gripper_port', 502)
+    self.declare_parameter('gripper_type', 'rg2')
+    self.declare_parameter('z_offset', -35.0)
     self.declare_parameter('min_depth', 30.0)
     self.declare_parameter('tilt_angle', 5.0)
-        
+    
     self._update_local_parameters()
     
     self.add_on_set_parameters_callback(self.parameter_update_callback)
@@ -134,7 +139,7 @@ class CommandExecuter(Node):
     self.acc_angular = self.get_parameter('acc_angular').value
     self.z_offset = self.get_parameter('z_offset').value
     self.min_depth = self.get_parameter('min_depth').value
-    self.tilt_angle = self.get_parameter('tile_angle').value
+    self.tilt_angle = self.get_parameter('tilt_angle').value
     
   def parameter_update_callback(self, params):
     """rqt 등 외부에서 파라미터 변경 시 호출되는 콜백"""
