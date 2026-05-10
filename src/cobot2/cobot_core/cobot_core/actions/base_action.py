@@ -8,8 +8,8 @@ class BaseAction(DSRobotController, VisionStarategy):
         super().__init__(manager) # DSRRobotController에게 manager 넘겨줌
     
     @property
-    def z_offset(self):
-        return self.manager.node.z_offset
+    def depth_offset(self):
+        return self.manager.node.depth_offset
     
     @property
     def tilt_angle(self):

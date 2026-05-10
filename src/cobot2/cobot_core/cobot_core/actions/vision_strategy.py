@@ -1,6 +1,8 @@
+import math
+
 class VisionStarategy:
     
-     def coarse_to_fine(self, target, z_offset=250.0):
+    def coarse_to_fine(self, target, z_offset=250.0):
         """2-Step Visual Servoing: 1차 탐지 -> 카메라 렌즈를 타겟 정상공에 정렬 -> 2차 정밀 탐지"""
         logger = self.manager.node.get_logger()
         
@@ -59,3 +61,23 @@ class VisionStarategy:
         else:
             logger.warn("⚠️ 2차 탐지 실패. 1차 좌표로 강행합니다.")
             return coarse_pos
+    
+    def get_dynamic_min_depth(self, target_ry):
+        """
+        목표 Pitch 각도(ry)를 기반으로 바닥과 충돌하지 않는 최소 안전 고도(Z)를 계산합니다.
+        """
+        # 두산 로봇 기준 ry=180이 수직 하강(바닥과 90도), ry=90이 수평(바닥과 0도)
+        angle_to_floor = abs(target_ry - 90.0) 
+        
+        # 파라미터 서버에서 값 가져오기
+        L = getattr(self.manager.node, 'gripper_length', 150.0)
+        base_safety = self.manager.node.min_depth # 예: 30mm (테이블 마진)
+        
+        # 그리퍼 길이 * sin(바닥과의 각도)
+        dynamic_margin = L * math.sin(math.radians(angle_to_floor))
+        
+        safe_z = base_safety + dynamic_margin
+        self.manager.node.get_logger().info(
+            f"🛡️ 동적 충돌 한계선: Z={safe_z:.1f}mm (마진:{dynamic_margin:.1f}mm, 각도:{angle_to_floor:.1f}도)"
+        )
+        return safe_z

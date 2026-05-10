@@ -10,9 +10,10 @@ command_executer:
     acc_angular: 70.0
     
     # 그리퍼 조작 관련
-    z_offset: -35.0  # 타겟 앞까지 접근하는 거리 (mm)
-    min_depth: 30.0      # 바닥 충돌 방지 최소 높이 (mm)
-    tile_angle: 5.0
+    tilt_angle: 5.0
+    gripper_length: 150
+    min_depth: 20.0      # 바닥 충돌 방지 최소 높이 (mm)
+    depth_offset: -35.0  # 계산된 표면 깊이로부터 내려가는 거리 (mm)
 
 # -----------------------------------------------
 # 2. 상태 및 에러 복구 파라미터 (state_manager)
