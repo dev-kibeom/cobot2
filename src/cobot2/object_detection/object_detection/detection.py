@@ -1,9 +1,10 @@
+import os
 import cv2
 import rclpy
 import time
 import threading
 import numpy as np
-import urllib.request
+import datetime
 
 from cv_bridge import CvBridge
 from rclpy.node import Node
@@ -52,6 +53,7 @@ class ObjectDetection(Node):
         
         self.last_snapshot = None 
         self.annotated_pub = self.create_publisher(CompressedImage, '/detection/annotated_image/compressed', 10)
+        self.depth_vis_pub = self.create_publisher(CompressedImage, '/detection/depth_visual/compressed', 10)
         self.snapshot_timer = self.create_timer(1.0, self.publish_snapshot_loop)
          
         self.get_logger().info("👁️ Vision AI Node initialized (JIT Mode).")
@@ -90,6 +92,9 @@ class ObjectDetection(Node):
         rclpy.spin_once(self.img_node)
 
         box, score = self.model.get_best_detection(self.img_node, target)
+        current_frame = self.img_node.get_color_frame()
+        depth_frame = self.img_node.get_depth_frame()
+        
         if box is None or score is None:
             self.get_logger().warn("No detection found.")
             return 0.0, 0.0, 0.0
@@ -102,16 +107,29 @@ class ObjectDetection(Node):
             self.get_logger().warn("Depth out of range or invalid.")
             return 0.0, 0.0, 0.0
 
-        return self._pixel_to_camera_coords(cx, cy, cz)
+        coords = self._pixel_to_camera_coords(cx, cy, cz)
+        
+        self._push_display_and_save(current_frame, depth_frame, box, target, score, coords)
+        
+        return coords
 
     def _get_depth(self, x, y):
-        """픽셀 좌표의 depth 값을 안전하게 읽어옵니다."""
+        """픽셀 주변 10x10 영역의 유효한 depth 중앙값을 구합니다."""
         frame = self._wait_for_valid_data(self.img_node.get_depth_frame, "depth frame")
         try:
-            return frame[y, x]
-        except IndexError:
-            self.get_logger().warn(f"Coordinates ({x},{y}) out of range.")
-            return None
+            h, w = frame.shape
+            x_min, x_max = max(0, x - 5), min(w, x + 5)
+            y_min, y_max = max(0, y - 5), min(h, y + 5)
+            patch = frame[y_min:y_max, x_min:x_max]
+            valid_depths = patch[patch > 0]
+            
+            if len(valid_depths) > 0:
+                return float(np.median(valid_depths))
+            else:
+                return 0.0
+        except Exception as e:
+            self.get_logger().warn(f"깊이값 계산 에러: {e}")
+            return 0.0
 
     def _wait_for_valid_data(self, getter, description):
         """getter 함수가 유효한 데이터를 반환할 때까지 spin 하며 재시도합니다."""
@@ -137,90 +155,103 @@ class ObjectDetection(Node):
 
     def _compute_position(self, target):
         """이미지를 처리해 객체의 카메라 좌표를 계산하고 화면에 출력합니다."""
-        #rclpy.spin_once(self.img_node)
-
-        # 처음 탐지를 시도할 때, 카메라 파라미터가 비어있으면 그때 딱 한 번만 가져옵니다.
         if self.intrinsics is None:
-            self.get_logger().info("카메라 내부 파라미터(Intrinsics)를 로드합니다...")
             self.intrinsics = self._wait_for_valid_data(
                 self.img_node.get_camera_intrinsic, "camera intrinsics"
             )
             
         box, score = self.model.get_best_detection(self.img_node, target)
-        
-        # 탐지가 끝난 직후, 현재 프레임을 가져와 딱 한 번만 박스를 그리고 송출합니다.
         current_frame = self.img_node.get_color_frame()
-        self._push_display_frame(current_frame, box, target, score)
+        depth_frame = self.img_node.get_depth_frame()
 
         if box is None or score is None:
             self.get_logger().warn("No detection found.")
+            self._push_display_and_save(current_frame, depth_frame, None, target, None, None)
             return 0.0, 0.0, 0.0
         
-        self.get_logger().info(f"Detection: box={box}, score={score}")
         cx, cy = map(int, [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2])
         cz = self._get_depth(cx, cy)
 
         if cz is None or cz <= 0:
             self.get_logger().warn("Depth out of range or invalid.")
+            self._push_display_and_save(current_frame, depth_frame, box, target, score, None)
             return 0.0, 0.0, 0.0
 
-        return self._pixel_to_camera_coords(cx, cy, cz)
+        coords = self._pixel_to_camera_coords(cx, cy, cz)
+        self._push_display_and_save(current_frame, depth_frame, box, target, score, coords)
 
-    def _push_display_frame(self, frame, box, target, score,
-                            url='http://localhost:8000/admin/display/frame'):
-        """bbox 오버레이한 프레임을 Manager UI display API로 push."""
-        if frame is None:
+        return coords
+
+    def _push_display_and_save(self, color_frame, depth_frame, box, target, score, coords):
+        """BBox 및 좌표를 그리고 이미지를 저장/퍼블리시 합니다."""
+        if color_frame is None:
             return
         
-        vis = frame.copy()
+        vis = color_frame.copy()
+        depth_vis = None
+        
+        # 16비트 Depth를 화려한 컬러맵(8비트)으로 변환
+        if depth_frame is not None:
+            # 0~65535 데이터를 눈으로 보기 좋게 0~255로 정규화
+            depth_norm = cv2.normalize(depth_frame, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+            depth_vis = cv2.applyColorMap(depth_norm, cv2.COLORMAP_JET)
+        
+        # BBox 및 텍스트 오버레이
         if box is not None and score is not None:
             x1, y1, x2, y2 = map(int, box)
             cv2.rectangle(vis, (x1, y1), (x2, y2), (79, 131, 244), 2)
+            
+            # 레이블에 모델 스코어 추가
             label = f"{target} {score:.2f}"
+            
+            # 좌표가 있으면 레이블에 추가
+            if coords is not None:
+                cx, cy, cz = coords
+                label += f" | X:{cx:.1f} Y:{cy:.1f} Z:{cz:.1f}"
+                # 깊이 이미지에도 박스 그리기
+                if depth_vis is not None:
+                    cv2.rectangle(depth_vis, (x1, y1), (x2, y2), (255, 255, 255), 2)
+                    cv2.circle(depth_vis, (int((x1+x2)/2), int((y1+y2)/2)), 5, (0, 0, 255), -1)
+
             (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
             cv2.rectangle(vis, (x1, y1 - th - 8), (x1 + tw + 4, y1), (79, 131, 244), -1)
             cv2.putText(vis, label, (x1 + 2, y1 - 4),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
         
-        self.last_snapshot = vis
+        # 결과 저장 (타임스탬프 활용)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:19]
+        color_filename = os.path.join(self.save_dir, f"detect_{timestamp}_{target}_color.jpg")
+        cv2.imwrite(color_filename, vis)
         
-        # ROS rqt용 토픽 발행 (cv2 이미지를 ROS Image 메시지로 변환)
+        if depth_vis is not None:
+            depth_filename = os.path.join(self.save_dir, f"detect_{timestamp}_{target}_depth.jpg")
+            cv2.imwrite(depth_filename, depth_vis)
+        
+        # ROS 퍼블리시를 위한 변수 업데이트
+        self.last_snapshot = vis
+        self.last_depth_snapshot = depth_vis
+        
         try:
             img_msg = self.bridge.cv2_to_compressed_imgmsg(vis)
             self.annotated_pub.publish(img_msg)
+            
+            if depth_vis is not None:
+                depth_msg = self.bridge.cv2_to_compressed_imgmsg(depth_vis)
+                self.depth_vis_pub.publish(depth_msg)
         except Exception as e:
             self.get_logger().error(f"이미지 토픽 발행 실패: {e}")
-            
-        # 웹 서버 HTTP 전송 (ROS 스레드를 막지 않도록 파이썬 백그라운드 스레드로 격리)
-        # def send_to_web():
-        #     try:
-        #         _, buf = cv2.imencode('.jpg', vis, [cv2.IMWRITE_JPEG_QUALITY, 80])
-        #         req = urllib.request.Request(
-        #             url, data=buf.tobytes(),
-        #             headers={'Content-Type': 'image/jpeg'},
-        #         )
-        #         # 타임아웃을 0.5초로 줄여 백그라운드 스레드도 금방 사라지게 합니다.
-        #         urllib.request.urlopen(req, timeout=0.5) 
-        #     except Exception:
-        #         pass
-    
-        # threading.Thread(target=send_to_web, daemon=True).start()
-        
-    # def publish_live_stream(self):
-    #     """타이머에 의해 0.1초마다 끊임없이 카메라 화면을 ROS rqt로 송출합니다."""
-    #     frame = self.img_node.get_color_frame()
-    #     if frame is not None:
-    #         # 마지막으로 기억된 타겟(latest_box)이 있다면 계속 화면에 그려줍니다.
-    #         self._push_display_frame(frame, self.latest_box, self.latest_target, self.latest_score)
     
     def publish_snapshot_loop(self):
         """1초에 1번씩 최근 스냅샷을 유지 송출 (rqt 늦게 켜도 보이도록 방어)"""
-        if self.last_snapshot is not None:
-            try:
+        try:
+            if self.last_snapshot is not None:
                 img_msg = self.bridge.cv2_to_compressed_imgmsg(self.last_snapshot)
                 self.annotated_pub.publish(img_msg)
-            except Exception:
-                pass
+            if self.last_depth_snapshot is not None:
+                depth_msg = self.bridge.cv2_to_compressed_imgmsg(self.last_depth_snapshot)
+                self.depth_vis_pub.publish(depth_msg)
+        except Exception:
+            pass
 
 def main(args=None):
     rclpy.init(args=args)
