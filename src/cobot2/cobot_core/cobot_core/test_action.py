@@ -12,11 +12,11 @@ class TestVoiceCommand(Node):
 
     def publish_test_sequence(self):
         sequence = [
-            {
-                "action": "reset",
-                "params": {},
-                "desc": "reset",
-            },
+            # {
+            #     "action": "reset",
+            #     "params": {},
+            #     "desc": "reset",
+            # },
             # # {
             # #     "action": "pick",
             # #     "params": {'target':'shaker'},
@@ -48,40 +48,33 @@ class TestVoiceCommand(Node):
             #     "desc": "movej",
             # },
             # {
-            #     "action": "movel",
-            #     "params": {'pos':[550, 0, 40, 0, 0, 0], 'vel':100, 'acc':100, 'mode':'abs'},
-            #     "desc": "movel",
+            #     "action": "movej",
+            #     "params": {'joint':[0, 0, 0, 70, 0, 0], 'vel':100, 'acc':100, 'mode':'rel'},
+            #     "desc": "movej",
             # },
             {
                 "action": "pick_horizontal",
                 "params": {'target':'shaker'},
                 "desc": "pick_horizontal",
             },
-            # # {
-            #     "action": "reset",
-            #     "params": {},
-            #     "desc": "reset",
-            # },
             # {
             #     "action": "pick_side",
             #     "params": {'target':'shaker'},
             #     "desc": "pick_side",
             # },
+            {
+                "action": "movej",
+                "params": {'joint':[0,0,0,0,0,30],
+                           'vel':100,
+                           'acc':100,
+                           'mode':'rel',},
+                "desc": 'movel'
+            },
             # {
             #     "action": "reset",
             #     "params": {},
             #     "desc": "reset",
-            # },
-            # {
-            #     "action": "pour",
-            #     "params": {'target':'shaker'},
-            #     "desc": 'pour'
-            # },
-            {
-                "action": "reset",
-                "params": {},
-                "desc": "reset",
-            }
+            # }
         ]
 
         msg = String()
