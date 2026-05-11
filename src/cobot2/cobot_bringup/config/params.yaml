@@ -14,8 +14,8 @@ command_executer:
     gripper_type: "rg2"
     
     # 그리퍼 조작 관련
-    tilt_angle: 5.0
-    gripper_length: 150
+    tilt_angle: -5.0
+    gripper_length: 0
     min_depth: 20.0      # 바닥 충돌 방지 최소 높이 (mm)
     depth_offset: -35.0  # 계산된 표면 깊이로부터 내려가는 거리 (mm)
 

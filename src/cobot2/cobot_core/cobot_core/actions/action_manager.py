@@ -30,14 +30,11 @@ class ActionManager():
         # OnRobot 그리퍼 Modbus TCP 단일 연결
         try:
             from cobot_core.controller.onrobot import RG
-            gripper_ip = self.node.get_parameter('gripper_ip').value
-            gripper_port = self.node.get_parameter('gripper_port').value
-            gripper_type = self.node.get_parameter('gripper_type').value
-            
-            self.gripper = RG(gripper_type, gripper_ip, gripper_port)
-            self.node.get_logger().info(f"✅ OnRobot {gripper_type.upper()} Modbus 연결 성공 ({gripper_ip}:{gripper_port})")
+        
+            self.gripper = RG()
+            self.node.get_logger().info("✅ OnRobot Modbus 연결 성공!")
         except Exception as e:
-            self.node.get_logger().error(f"⚠️ 그리퍼 통신 연결 실패: {e}")
+            self.node.get_logger().error("⚠️ 그리퍼 통신 연결 실패: {e}")
             self.gripper = None
             
         # Hand-Eye 캘리브레이션 행렬 로드

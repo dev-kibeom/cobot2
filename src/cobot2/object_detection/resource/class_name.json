@@ -1,10 +1,9 @@
 {
     "0": "shaker",
-    "1": "bottle",
-    "2": "cup",
-    "3": "toy_block",
-    "4": "plate",
-    "5": "tissue",
-    "6": "smartphone",
-    "7": "glasses"
+    "1": "toy_block",
+    "2": "plate",
+    "3": "apple",
+    "4": "pear",
+    "5": "orange",
+    "6": "banana"
 }

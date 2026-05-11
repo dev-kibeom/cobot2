@@ -91,7 +91,6 @@ class CommandExecuter(Node):
     feedback = Command.Feedback()
     
     self.action_manager.is_error = False
-    self.action_manager.perform('clear_alarm')
     
     for i, step in enumerate(sequence):
       # 중단 요청 확인
