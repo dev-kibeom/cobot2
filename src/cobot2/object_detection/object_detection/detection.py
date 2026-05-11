@@ -24,6 +24,7 @@ PACKAGE_PATH = get_package_share_directory(PACKAGE_NAME)
 
 class ObjectDetection(Node):
     def __init__(self, model_name = 'yolo'):
+        
         super().__init__('object_detection')
         
         self.declare_parameter('model_name', 'yolo')
@@ -37,7 +38,8 @@ class ObjectDetection(Node):
         self.json_filename = self.get_parameter('yolo_class_name_json').value
         self.conf_threshold = self.get_parameter('confidence_threshold').value
         self.iou_threshold = self.get_parameter('iou_threshold').value
-        
+        self.save_dir = os.path.expanduser("~/cobot_ws/detection_results")
+        os.makedirs(self.save_dir, exist_ok=True)
         self.img_node = ImgNode()
         self.model = self._load_model(model_name)
         
@@ -219,7 +221,7 @@ class ObjectDetection(Node):
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
         
         # 결과 저장 (타임스탬프 활용)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:19]
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:19]
         color_filename = os.path.join(self.save_dir, f"detect_{timestamp}_{target}_color.jpg")
         cv2.imwrite(color_filename, vis)
         

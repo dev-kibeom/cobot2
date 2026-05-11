@@ -27,7 +27,7 @@ class CommandExecuter(Node):
     self.declare_parameter('acc_linear', 50.0)
     self.declare_parameter('vel_angular', 70.0)
     self.declare_parameter('acc_angular', 70.0)
-    self.declare_parameter('depth_offset', -35.0)
+    self.declare_parameter('z_offset', -35.0)
     self.declare_parameter('min_depth', 30.0)
     self.declare_parameter('tilt_angle', 5.0)
         
@@ -134,7 +134,7 @@ class CommandExecuter(Node):
     self.acc_angular = self.get_parameter('acc_angular').value
     self.z_offset = self.get_parameter('z_offset').value
     self.min_depth = self.get_parameter('min_depth').value
-    self.tilt_angle = self.get_parameter('tile_angle').value
+    self.tilt_angle = self.get_parameter('tilt_angle').value
     
   def parameter_update_callback(self, params):
     """rqt 등 외부에서 파라미터 변경 시 호출되는 콜백"""

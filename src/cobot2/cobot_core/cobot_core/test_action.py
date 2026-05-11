@@ -12,64 +12,39 @@ class TestVoiceCommand(Node):
 
     def publish_test_sequence(self):
         sequence = [
-            # {
-            #     "action": "reset",
-            #     "params": {},
-            #     "desc": "reset",
-            # },
-            # # {
-            # #     "action": "pick",
-            # #     "params": {'target':'shaker'},
-            # #     "desc": "pick",
-            # # },
-            # # {
-            # #     "action": "reset",
-            # #     "params": {},
-            # #     "desc": "reset",
-            # # },
-            # {
-            #     "action": "tap",
-            #     "params": {'target':'shaker'},
-            #     "desc": "tap",
-            # },
-            # {
-            #     "action": "reset",
-            #     "params": {},
-            #     "desc": "reset",
-            # },
-            # {
-            #     "action": "hello_bot",
-            #     "params": {},
-            #     "desc": "hello_bot",
-            # },
-            # {
-            #     "action": "movej",
-            #     "params": {'joint':[0, 0, 110, 90, 0, 0], 'vel':100, 'acc':100, 'mode':'abs'},
-            #     "desc": "movej",
-            # },
-            # {
-            #     "action": "movej",
-            #     "params": {'joint':[0, 0, 0, 70, 0, 0], 'vel':100, 'acc':100, 'mode':'rel'},
-            #     "desc": "movej",
-            # },
             {
-                "action": "pick_horizontal",
-                "params": {'target':'shaker'},
-                "desc": "pick_horizontal",
+                "action": "reset",
+                "params": {},
+                "desc": "reset",
             },
+            {
+                "action": "place",
+                "params":{'target':'right_box'},
+                "decs":"right"
+            },
+            {
+                "action": "place",
+                "params":{'target':'left_box'},
+                "decs":"right"
+            },
+            # {
+            #     "action": "pick_horizontal",
+            #     "params": {'target':'shaker'},
+            #     "desc": "pick_horizontal",
+            # },
             # {
             #     "action": "pick_side",
             #     "params": {'target':'shaker'},
             #     "desc": "pick_side",
             # },
-            {
-                "action": "movej",
-                "params": {'joint':[0,0,0,0,0,30],
-                           'vel':100,
-                           'acc':100,
-                           'mode':'rel',},
-                "desc": 'movel'
-            },
+            # {
+            #     "action": "movej",
+            #     "params": {'joint':[0,0,0,0,0,30],
+            #                'vel':100,
+            #                'acc':100,
+            #                'mode':'rel',},
+            #     "desc": 'movel'
+            # },
             # {
             #     "action": "reset",
             #     "params": {},

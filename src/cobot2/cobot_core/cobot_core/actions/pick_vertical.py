@@ -15,7 +15,7 @@ class PickVertical(BaseAction):
         tx, ty, tz, rx, ry, rz = fine_pos
         
         # ==========================================
-        # 3. 하강 및 그립
+        #  하강 및 그립
         # ==========================================
         grip_pos = [tx, ty, tz - 70.0, rx, ry, rz]
         if not self.manager.perform('movel', pos=grip_pos, mode='abs'): return False
