@@ -204,7 +204,7 @@ class ObjectDetection(Node):
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
         
         # 결과 저장 (타임스탬프 활용)
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:19]
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:19]
         color_filename = os.path.join(self.save_dir, f"detect_{timestamp}_{target}_color.jpg")
         cv2.imwrite(color_filename, vis)
         

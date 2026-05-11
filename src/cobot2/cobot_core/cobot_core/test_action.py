@@ -17,35 +17,35 @@ class TestVoiceCommand(Node):
                 "params": {},
                 "desc": "reset",
             },
-            # {
-            #     "action": "place",
-            #     "params":{'target':'right_box'},
-            #     "decs":"right"
-            # },
-            # {
-            #     "action": "place",
-            #     "params":{'target':'left_box'},
-            #     "decs":"right"
-            # },
+            {
+                "action": "place",
+                "params":{'target':'right_box'},
+                "decs":"right"
+            },
+            {
+                "action": "place",
+                "params":{'target':'left_box'},
+                "decs":"right"
+            },
             # {
             #     "action": "trash",
             #     "params": {},
             #     "desc": "pick_horizontal",
             # },
+            # {
+            #     "action": "movej",
+            #     "params": {'joint':[0,0,0,0,0,90], 'acc':100, 'vel':100, 'mode':'rel'},
+            #     "desc": "pick_side",
+            # },
+            # {
+            #     "action": "pour",
+            #     "params": {'target':'plate'},
+            #     "desc": "pour",
+            # },
             {
-                "action": "movej",
-                "params": {'joint':[0,0,0,0,0,90], 'acc':100, 'vel':100, 'mode':'rel'},
-                "desc": "pick_side",
-            },
-            {
-                "action": "gripper_open",
+                "action": "trash",
                 "params": {},
-                "desc": "pick_side",
-            },
-            {
-                "action": "gripper_close",
-                "params": {},
-                "desc": 'movel'
+                "desc": 'trash'
             },
             {
                 "action": "reset",
