@@ -4,7 +4,7 @@ import rclpy
 import time
 import threading
 import numpy as np
-import datetime
+from datetime import datetime
 
 from cv_bridge import CvBridge
 from rclpy.node import Node
@@ -25,6 +25,9 @@ PACKAGE_PATH = get_package_share_directory(PACKAGE_NAME)
 class ObjectDetection(Node):
     def __init__(self, model_name = 'yolo'):
         super().__init__('object_detection')
+        
+        self.save_dir = os.path.join(os.path.expanduser('~'), 'cobot_ws', 'vision_logs')
+        os.makedirs(self.save_dir, exist_ok=True)
         
         self.declare_parameter('model_name', 'yolo')
         self.declare_parameter('yolo_model_filename', 'best.pt')
@@ -88,29 +91,38 @@ class ObjectDetection(Node):
         return response
 
     def _compute_position(self, target):
-        """이미지를 처리해 객체의 카메라 좌표를 계산합니다."""
-        rclpy.spin_once(self.img_node)
-
+        """이미지를 처리해 객체의 카메라 좌표를 계산하고 화면에 출력합니다."""
+        # 1. 카메라 내부 파라미터가 없으면 가져옵니다.
+        if self.intrinsics is None:
+            self.intrinsics = self._wait_for_valid_data(
+                self.img_node.get_camera_intrinsic, "camera intrinsics"
+            )
+            
+        # 2. YOLO 탐지 및 최신 프레임 획득
         box, score = self.model.get_best_detection(self.img_node, target)
         current_frame = self.img_node.get_color_frame()
         depth_frame = self.img_node.get_depth_frame()
-        
+
+        # 3. 탐지 실패 시 빈 화면 저장 후 종료
         if box is None or score is None:
-            self.get_logger().warn("No detection found.")
+            self.get_logger().warn(f"'{target}'을(를) 화면에서 찾을 수 없습니다.")
+            self._push_display_and_save(current_frame, depth_frame, None, target, None, None)
             return 0.0, 0.0, 0.0
         
-        self.get_logger().info(f"Detection: box={box}, score={score}")
+        # 4. 탐지 성공 시 중심점(cx, cy) 추출 및 깊이(cz) 획득
+        self.get_logger().info(f"Detection: box={box}, score={score:.2f}")
         cx, cy = map(int, [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2])
         cz = self._get_depth(cx, cy)
 
         if cz is None or cz <= 0:
-            self.get_logger().warn("Depth out of range or invalid.")
+            self.get_logger().warn("깊이(Depth) 값이 범위를 벗어났거나 유효하지 않습니다.")
+            self._push_display_and_save(current_frame, depth_frame, box, target, score, None)
             return 0.0, 0.0, 0.0
 
+        # 5. 픽셀 좌표를 3D 카메라 좌표로 변환 후 저장
         coords = self._pixel_to_camera_coords(cx, cy, cz)
-        
         self._push_display_and_save(current_frame, depth_frame, box, target, score, coords)
-        
+
         return coords
 
     def _get_depth(self, x, y):
@@ -152,35 +164,6 @@ class ObjectDetection(Node):
             (y - ppy) * z / fy,
             z
         )
-
-    def _compute_position(self, target):
-        """이미지를 처리해 객체의 카메라 좌표를 계산하고 화면에 출력합니다."""
-        if self.intrinsics is None:
-            self.intrinsics = self._wait_for_valid_data(
-                self.img_node.get_camera_intrinsic, "camera intrinsics"
-            )
-            
-        box, score = self.model.get_best_detection(self.img_node, target)
-        current_frame = self.img_node.get_color_frame()
-        depth_frame = self.img_node.get_depth_frame()
-
-        if box is None or score is None:
-            self.get_logger().warn("No detection found.")
-            self._push_display_and_save(current_frame, depth_frame, None, target, None, None)
-            return 0.0, 0.0, 0.0
-        
-        cx, cy = map(int, [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2])
-        cz = self._get_depth(cx, cy)
-
-        if cz is None or cz <= 0:
-            self.get_logger().warn("Depth out of range or invalid.")
-            self._push_display_and_save(current_frame, depth_frame, box, target, score, None)
-            return 0.0, 0.0, 0.0
-
-        coords = self._pixel_to_camera_coords(cx, cy, cz)
-        self._push_display_and_save(current_frame, depth_frame, box, target, score, coords)
-
-        return coords
 
     def _push_display_and_save(self, color_frame, depth_frame, box, target, score, coords):
         """BBox 및 좌표를 그리고 이미지를 저장/퍼블리시 합니다."""

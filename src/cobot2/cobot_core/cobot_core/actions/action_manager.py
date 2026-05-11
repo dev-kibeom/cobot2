@@ -30,14 +30,11 @@ class ActionManager():
         # OnRobot 그리퍼 Modbus TCP 단일 연결
         try:
             from cobot_core.controller.onrobot import RG
-            gripper_ip = self.node.get_parameter('gripper_ip').value
-            gripper_port = self.node.get_parameter('gripper_port').value
-            gripper_type = self.node.get_parameter('gripper_type').value
-            
-            self.gripper = RG(gripper_type, gripper_ip, gripper_port)
-            self.node.get_logger().info(f"✅ OnRobot {gripper_type.upper()} Modbus 연결 성공 ({gripper_ip}:{gripper_port})")
+        
+            self.gripper = RG()
+            self.node.get_logger().info("✅ OnRobot Modbus 연결 성공!")
         except Exception as e:
-            self.node.get_logger().error(f"⚠️ 그리퍼 통신 연결 실패: {e}")
+            self.node.get_logger().error("⚠️ 그리퍼 통신 연결 실패: {e}")
             self.gripper = None
             
         # Hand-Eye 캘리브레이션 행렬 로드
@@ -106,7 +103,7 @@ class ActionManager():
         """actions 폴더 내의 모든 액션들을 자동으로 등록"""
         # 파일 임포트
         for _, name, _ in pkgutil.iter_modules(logical_actions.__path__):
-            full_module_name = f"cobot_core.actions.{name}"
+            full_module_name = f"cobot_core.actions.logical_actions.{name}"
             importlib.import_module(full_module_name)
         
         # 액션 등록

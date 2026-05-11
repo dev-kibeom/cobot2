@@ -9,6 +9,9 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(behaviortree_cpp_v3 REQUIRED)
+find_package(rclcpp_action REQUIRED)
+find_package(nlohmann_json REQUIRED)
+find_package(command REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -22,11 +25,16 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-add_executable(bt_manager_node 
+add_executable(bt_manager
   src/main.cpp
   # src/PickItemNode.cpp (나중에 cpp 파일을 분리한다면 여기에 추가)
 )
-ament_target_dependencies(bt_manager_node rclcpp behaviortree_cpp_v3)
+ament_target_dependencies(bt_manager rclcpp behaviortree_cpp_v3 rclcpp_action command nlohmann_json)
+
+install(TARGETS
+  bt_manager
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 ament_package()
 install(DIRECTORY config

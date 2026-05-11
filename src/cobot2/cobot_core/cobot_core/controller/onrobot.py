@@ -4,7 +4,11 @@ from pymodbus.client.sync import ModbusTcpClient as ModbusClient
 
 class RG():
 
-    def __init__(self, gripper, ip, port):
+    def __init__(self):
+        ip = '192.168.1.1' 
+        port = 502
+        gripper = 'rg2'
+        
         self.client = ModbusClient(
             ip,
             port=port,
@@ -13,21 +17,28 @@ class RG():
             parity='E',
             baudrate=115200,
             timeout=1)
+        
         if gripper not in ['rg2', 'rg6']:
             print("Please specify either rg2 or rg6.")
             return
+        
         self.gripper = gripper  # RG2/6
+        
         if self.gripper == 'rg2':
             self.max_width = 1100
             self.max_force = 400
         elif self.gripper == 'rg6':
             self.max_width = 1600
             self.max_force = 1200
+            
         self.open_connection()
 
     def open_connection(self):
         """Opens the connection with a gripper."""
-        self.client.connect()
+        is_connected = self.client.connect()
+        if not is_connected:
+            # 연결 실패 시 강제로 에러를 발생시켜서 ActionManager가 알 수 있게 합니다!
+            raise ConnectionError("Modbus TCP 연결 실패! 그리퍼 IP와 포트를 확인하세요.")
 
     def close_connection(self):
         """Closes the connection with the gripper."""

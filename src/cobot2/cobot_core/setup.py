@@ -31,7 +31,7 @@ setup(
     entry_points={
         'console_scripts': [
             'state_manager = cobot_core.state_manager:main',
-            'executer = cobot_core.executer:main',
+            'executer = cobot_core.controller.executer:main',
             'test_action = cobot_core.test_action:main',
         ],
     },

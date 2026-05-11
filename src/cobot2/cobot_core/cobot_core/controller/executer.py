@@ -29,7 +29,7 @@ class CommandExecuter(Node):
     self.declare_parameter('acc_angular', 70.0)
 
     # 그리퍼 관련 파라미터
-    self.declare_parameter('gripper_ip', '192.168.137.2') # 실제 할당된 IP로 변경 필요
+    self.declare_parameter('gripper_ip', '192.168.1.100') # 실제 할당된 IP로 변경 필요
     self.declare_parameter('gripper_port', 502)
     self.declare_parameter('gripper_type', 'rg2')
     self.declare_parameter('depth_offset', -35.0)
@@ -91,7 +91,6 @@ class CommandExecuter(Node):
     feedback = Command.Feedback()
     
     self.action_manager.is_error = False
-    self.action_manager.perform('clear_alarm')
     
     for i, step in enumerate(sequence):
       # 중단 요청 확인

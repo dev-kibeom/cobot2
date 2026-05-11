@@ -10,8 +10,8 @@ command_executer:
     acc_angular: 70.0
     
     # 그리퍼 조작 관련
-    tilt_angle: 5.0
-    gripper_length: 150
+    tilt_angle: -5.0
+    gripper_length: 0
     min_depth: 20.0      # 바닥 충돌 방지 최소 높이 (mm)
     depth_offset: -35.0  # 계산된 표면 깊이로부터 내려가는 거리 (mm)
 
@@ -25,7 +25,7 @@ state_manager:
 # -----------------------------------------------
 # 3. 비전 AI 파라미터 (object_detection_node)
 # -----------------------------------------------
-object_detection_node:
+object_detection:
   ros__parameters:
     model_name: "yolo"
     yolo_model_filename: "best.pt"
@@ -54,7 +54,7 @@ voice_to_command:
 # -----------------------------------------------
 # 5. 음성 합성(TTS) 파라미터 (voice_client_node)
 # -----------------------------------------------
-voice_client_node:
+voice_client:
   ros__parameters:
     tts_model: "tts-1"
     tts_voice: "onyx"
