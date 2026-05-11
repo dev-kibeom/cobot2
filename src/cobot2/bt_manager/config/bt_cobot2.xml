@@ -1,27 +1,27 @@
 <?xml version="1.0"?>
 <root main_tree_to_execute="BehaviorTree">
-    <!-- ////////// -->
     <BehaviorTree ID="BehaviorTree">
         <KeepRunningUntilFailure>
             <Sequence>
                 <Action ID="PopNextTask" llm_json="{llm_json}" action_name="{action}" target_name="{target}"/>
-                <Fallback name="RootSelector">
-                    <Sequence name="SequenceWithTarget">
+                
+                <Fallback name="SearchTargetSelector">
+                    <Inverter>
                         <Condition ID="IsTargetRequired" target_name="{target}"/>
-                        <Fallback>
-                            <Condition ID="IsTargetLocated" target_name="{target}"/>
-                            <Action ID="ExecutePythonAction" action_name="finding" target_name="{target}"/>
-                        </Fallback>
-                    </Sequence>
-                    <Sequence name="SequenceWithoutTarget">
-                        <Condition ID="IsObjectGripped"/>
-                    </Sequence>
+                    </Inverter>
+                    
+                    <Fallback name="SearchLogic">
+                        <Condition ID="IsTargetLocated" target_name="{target}"/>
+                        <Action ID="ExecutePythonAction" action_name="detect_in_place" target_name="{target}"/>
+                        <Action ID="ExecutePythonAction" action_name="finding" target_name="{target}"/>
+                    </Fallback>
                 </Fallback>
+
                 <Action ID="ExecutePythonAction" action_name="{action}" target_name="{target}"/>
             </Sequence>
         </KeepRunningUntilFailure>
     </BehaviorTree>
-    <!-- ////////// -->
+    
     <TreeNodesModel>
         <Action ID="ExecutePythonAction">
             <input_port default="{action}" name="action_name"/>
@@ -40,5 +40,4 @@
             <output_port default="{target}" name="target_name"/>
         </Action>
     </TreeNodesModel>
-    <!-- ////////// -->
 </root>

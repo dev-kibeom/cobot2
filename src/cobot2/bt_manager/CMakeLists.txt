@@ -12,6 +12,7 @@ find_package(behaviortree_cpp_v3 REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(command REQUIRED)
+find_package(std_msgs REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -29,7 +30,7 @@ add_executable(bt_manager
   src/main.cpp
   # src/PickItemNode.cpp (나중에 cpp 파일을 분리한다면 여기에 추가)
 )
-ament_target_dependencies(bt_manager rclcpp behaviortree_cpp_v3 rclcpp_action command nlohmann_json)
+ament_target_dependencies(bt_manager rclcpp behaviortree_cpp_v3 rclcpp_action command nlohmann_json std_msgs)
 
 install(TARGETS
   bt_manager

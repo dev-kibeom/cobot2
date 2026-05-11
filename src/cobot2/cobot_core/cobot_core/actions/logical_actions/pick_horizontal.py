@@ -9,7 +9,20 @@ class PickHorizontal(BaseAction):
 
         if not target: return False
 
-        fine_pos = self.coarse_to_fine(target, z_offset=300)
+        # ==========================================
+        # 💡 [핵심 수정] BT가 찾아둔 좌표가 있는지 먼저 확인!
+        # ==========================================
+        if self.manager.target_pos is not None:
+            logger.info("✅ BT(finding)에서 탐지한 좌표를 그대로 사용합니다.")
+            fine_pos = self.manager.target_pos
+            
+            # 🚨 1회용으로 썼으니 다음 동작을 위해 기억을 지워줍니다 (안전장치)
+            self.manager.target_pos = None 
+        else:
+            logger.warn("⚠️ 저장된 좌표가 없어 객체 탐지를 재시도합니다 (coarse_to_fine).")
+            fine_pos = self.coarse_to_fine(target, z_offset=300)
+            if not fine_pos: return False
+            
         tx, ty, tz, _, _, _ = fine_pos
 
         # ==========================================

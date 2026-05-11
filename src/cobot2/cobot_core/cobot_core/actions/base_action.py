@@ -20,7 +20,7 @@ class BaseAction(DSRobotController, VisionStarategy):
         raise NotImplementedError
     
     
-    def reset(self):
+    def reset(self, **kwargs):
         from DSR_ROBOT2 import movej
         from DSR_ROBOT2 import posj
         
@@ -32,7 +32,7 @@ class BaseAction(DSRobotController, VisionStarategy):
         self.gripper_open()
         return True
     
-    def clear_alarm(self):
+    def clear_alarm(self, **kwargs):
         """ROS 2 순수 서비스 호출로 에러 복구 (PyDSR 제너레이터 충돌 방지)"""
         import DR_init
         from dsr_msgs2.srv import SetRobotControl
