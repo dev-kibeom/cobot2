@@ -27,7 +27,10 @@ class RG():
 
     def open_connection(self):
         """Opens the connection with a gripper."""
-        self.client.connect()
+        ok = self.client.connect()
+        if not ok:
+            raise ConnectionError("OnRobot Modbus TCP 연결 실패")
+        return True
 
     def close_connection(self):
         """Closes the connection with the gripper."""
@@ -163,21 +166,37 @@ class RG():
 
     def close_gripper(self, force_val=400):
         """Closes gripper."""
-        params = [force_val, 0, 16]
         print("Start closing gripper.")
-        result = self.client.write_registers(
-            address=0, values=params, unit=65)
+        self.set_target_force(force_val)
+        self.set_target_width(0)
+        self.set_control_mode(16)
+        return True
+
 
     def open_gripper(self, force_val=400):
         """Opens gripper."""
-        params = [force_val, self.max_width, 16]
         print("Start opening gripper.")
-        result = self.client.write_registers(
-            address=0, values=params, unit=65)
+        self.set_target_force(force_val)
+        self.set_target_width(self.max_width)
+        self.set_control_mode(16)
+        return True
+
 
     def move_gripper(self, width_val, force_val=400):
         """Moves gripper to the specified width."""
-        params = [force_val, width_val, 16]
         print("Start moving gripper.")
-        result = self.client.write_registers(
-            address=0, values=params, unit=65)
+        self.set_target_force(force_val)
+        self.set_target_width(width_val)
+        self.set_control_mode(16)
+        return True
+
+    def _check_result(self, result, action_name):
+        if result is None:
+            print(f"❌ {action_name} 실패: Modbus 응답이 없습니다.")
+            return False
+
+        if hasattr(result, "isError") and result.isError():
+            print(f"❌ {action_name} 실패: {result}")
+            return False
+
+        return True

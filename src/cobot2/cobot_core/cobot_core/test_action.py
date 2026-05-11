@@ -17,39 +17,41 @@ class TestVoiceCommand(Node):
                 "params": {},
                 "desc": "reset",
             },
-            {
-                "action": "place",
-                "params":{'target':'right_box'},
-                "decs":"right"
-            },
-            {
-                "action": "place",
-                "params":{'target':'left_box'},
-                "decs":"right"
-            },
-            {
-                "action": "trash",
-                "params": {},
-                "desc": "pick_horizontal",
-            },
             # {
-            #     "action": "pick_side",
-            #     "params": {'target':'shaker'},
-            #     "desc": "pick_side",
+            #     "action": "place",
+            #     "params":{'target':'right_box'},
+            #     "decs":"right"
             # },
             # {
-            #     "action": "movej",
-            #     "params": {'joint':[0,0,0,0,0,30],
-            #                'vel':100,
-            #                'acc':100,
-            #                'mode':'rel',},
-            #     "desc": 'movel'
+            #     "action": "place",
+            #     "params":{'target':'left_box'},
+            #     "decs":"right"
             # },
             # {
-            #     "action": "reset",
+            #     "action": "trash",
             #     "params": {},
-            #     "desc": "reset",
-            # }
+            #     "desc": "pick_horizontal",
+            # },
+            {
+                "action": "movej",
+                "params": {'joint':[0,0,0,0,0,90], 'acc':100, 'vel':100, 'mode':'rel'},
+                "desc": "pick_side",
+            },
+            {
+                "action": "gripper_open",
+                "params": {},
+                "desc": "pick_side",
+            },
+            {
+                "action": "gripper_close",
+                "params": {},
+                "desc": 'movel'
+            },
+            {
+                "action": "reset",
+                "params": {},
+                "desc": "reset",
+            }
         ]
 
         msg = String()

@@ -244,31 +244,49 @@ class DSRobotController:
     def gripper_open(self, force=400):
         """그리퍼를 최대 폭으로 개방합니다."""
         if hasattr(self.manager, 'gripper') and self.manager.gripper:
-            self.manager.gripper.open_gripper(force_val=force)
-            self.wait(1.0) # 동작 안정화 대기
-        else:
-            print("⚠️ 그리퍼가 연결되어 있지 않습니다.")
-            
+            ok = self.manager.gripper.open_gripper(force_val=force)
+            self.wait(1.0)
+
+            if ok is False:
+                print("❌ 그리퍼 열기 명령 실패")
+                return False
+
+            return True
+
+        print("⚠️ 그리퍼가 연결되어 있지 않습니다.")
+        return False
+
+
     def gripper_close(self, force=400):
         """그리퍼를 완전히 닫아 파지합니다."""
         if hasattr(self.manager, 'gripper') and self.manager.gripper:
-            self.manager.gripper.close_gripper(force_val=force)
+            ok = self.manager.gripper.close_gripper(force_val=force)
             self.wait(1.0)
-            
-            # (선택) onrobot.py의 get_status()를 활용해 제대로 잡혔는지 확인 가능
-            # status = self.manager.gripper.get_status()
-            # if status[1] == 1: print("✨ 물체 파지 성공!")
-        else:
-            print("⚠️ 그리퍼가 연결되어 있지 않습니다.")
+
+            if ok is False:
+                print("❌ 그리퍼 닫기 명령 실패")
+                return False
+
+            return True
+
+        print("⚠️ 그리퍼가 연결되어 있지 않습니다.")
+        return False
+
 
     def gripper_open_little(self, width=650, force=400):
-        """그리퍼를 RG2 최대 폭의 절반(55mm)보다 1cm만큼 더 정밀하게 엽니다."""
+        """그리퍼를 지정 폭으로 엽니다."""
         if hasattr(self.manager, 'gripper') and self.manager.gripper:
-            # move_gripper는 특정 폭(width_val)으로 이동합니다.
-            self.manager.gripper.move_gripper(width_val=width, force_val=force)
+            ok = self.manager.gripper.move_gripper(width_val=width, force_val=force)
             self.wait(1.0)
-        else:
-            print("⚠️ 그리퍼가 연결되어 있지 않습니다.")
+
+            if ok is False:
+                print("❌ 그리퍼 부분 열기 명령 실패")
+                return False
+
+            return True
+
+        print("⚠️ 그리퍼가 연결되어 있지 않습니다.")
+        return False
     
     def gripper_close_little(self, width=450, force=400):
         """그리퍼를 RG2 최대 폭의 절반(55mm)보다 1cm만큼 덜 정밀하게 닫습니다."""
