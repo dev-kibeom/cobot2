@@ -1,239 +1,106 @@
 import rclpy
+import time
 import json
-
 from rclpy.node import Node
 from std_msgs.msg import String
-from rclpy.action import ActionClient
-from std_srvs.srv import Trigger
-
-from command.action import Command
+from dsr_msgs2.srv import SetRobotControl
 
 class StateManager(Node):
     def __init__(self):
         super().__init__('state_manager')
         
-        # 로봇 상태 관리
-        self.state = "IDLE"
-        self.current_sequence = []
+        self.last_heartbeat = time.time()
+        self.is_locked = False  # 🚨 E-Stop 발동 시 시스템을 잠그는 플래그
+
+        self.create_timer(1.0, self.watchdog_check)
         
-        self.declare_parameter('max_retries', 2)
+        # UI Bridge 모드와 상관없이 항상 발행되는 /status를 생존 신호로 사용합니다.
+        self.create_subscription(String, '/status', self.hb_cb, 10)
         
-        # 에러처리 관련 변수
-        self.current_step_index = 0
-        self.retry_count = 0
-        self.recovery_timer = None
-        self.sliced_offset = 0
-        self.max_retries = self.get_parameter('max_retries').value
-        
-        # 파싱된 레시피 받는 토픽, 실행자와 액션 클라이언트, 관리재 잠금 해제 서비스
-        self.command_sub = self.create_subscription(String, '/voice_command', self.recipe_callback, 10)
-        self._action_client = ActionClient(self, Command, 'execute_command')
-        self.unlock_srv = self.create_service(Trigger, 'unlock_system', self.unlock_callback)
-        self.status_pub = self.create_publisher(String, '/status', 10)
-        
-        self.get_logger().info("🧠 State Manager가 대기 중입니다 (상태: IDLE).")
-        
-    def recipe_callback(self, msg):
-        """파서로부터 레시피 받았을 때의 처리"""
-        
-        # [테스트 편의 기능] 사용자가 새 명령을 내리면 '강제 초기화' 후 새 명령 수용 ==================
-        if self.state in ["RECOVERING_FAIL", "ERROR", "ADMIN_INTERVENTION"]:
-            self.get_logger().info("🔓 에러 상태에서 새 명령을 수신하여 시스템 잠금을 자동 해제합니다.")
-            self.state = "IDLE"
-            self.publish_status(error_msg="") # 에러 메시지 초기화
-        # =================================================================================
-        
-        if self.state != "IDLE":
-            self.get_logger().warn(f"⚠️ 현재 로봇이 '{self.state}' 상태입니다. 새 레시피를 무시합니다.")
-            return
-        
+        # 👨‍💻 관리자 UI 명령 구독 (수동 E-Stop / Unlock)
+        self.create_subscription(String, '/admin_command', self.admin_cmd_cb, 10)
+
+        # 하드웨어 제어 명령
+        self.estop_cli = self.create_client(SetRobotControl, '/dsr01/system/set_robot_control')
+
+        self.get_logger().info("🛡️ Watchdog & Admin Control Ready: 자동 감시 및 관리자 명령 대기 중")
+
+    def hb_cb(self, msg):
+        """정상 상태일 때 심박수 갱신"""
+        if not self.is_locked:
+            self.last_heartbeat = time.time()
+
+    def watchdog_check(self):
+        """통신 두절 시 자동 E-Stop 발동"""
+        if self.is_locked:
+            return  # 이미 잠겨있다면 중복 체크 안 함
+            
+        if (time.time() - self.last_heartbeat) > 5.0:
+            self.get_logger().fatal("💀 시스템 응답 없음! [자동] 비상 정지 발동!")
+            self.trigger_estop()
+
+    # ==========================================
+    # 👨‍💻 관리자 UI 명령 처리 로직
+    # ==========================================
+    def admin_cmd_cb(self, msg):
+        """관리자 UI에서 보낸 명령(JSON) 처리"""
         try:
-            parsed_data = json.loads(msg.data)
+            data = json.loads(msg.data)
+            cmd = data.get("command", "").upper()
             
-            # 🚨 LLM 응답에서 'sequence' 리스트만 정확히 추출
-            if isinstance(parsed_data, dict) and "sequence" in parsed_data:
-                self.current_sequence = parsed_data["sequence"]
-            elif isinstance(parsed_data, list):
-                self.current_sequence = parsed_data
-            else:
-                self.get_logger().error("❌ JSON 데이터에서 'sequence' 리스트를 찾을 수 없습니다.")
-                return
-            
-            # 새 레시피 수신 시 초기화
-            self.retry_count = 0
-            self.current_step_index = 0
-            self.sliced_offset = 0
-            
-            self.send_goal_to_executer(self.current_sequence)
-        except Exception as e:
-            self.get_logger().error(f"❌ 데이터 로드 실패: {e}")
-            
-    def send_goal_to_executer(self, sequence, is_recovery=False):
-        """Executer로 Action Goal 전송 (정상 실행과 재시도/복구 모두 사용)"""
-        if not is_recovery:
-            self.state = "EXECUTING"
-            
-        goal_msg = Command.Goal()
-        goal_msg.command = json.dumps(sequence, ensure_ascii=False)
-        
-        self.get_logger().info("⏳ Executer 연결 대기 중...")
-        
-        # 무한 대기 방지! Executer가 죽어있으면 3초 뒤에 포기하고 IDLE로 돌아감
-        if not self._action_client.wait_for_server(timeout_sec=3.0):
-            self.get_logger().error("❌ Executer 서버가 응답하지 않습니다! (Executer 노드가 죽었는지 확인하세요)")
-            self.state = "ERROR"
-            self.publish_status(error_msg="Executer 응답 없음")
-            return
-        
-        if is_recovery:
-            self.get_logger().info("🚑 에러 복구를 위한 동작 명령 하달!")
-        else:
-            self.get_logger().info("🚀 시퀀스 동작 명령 하달!")
-            
-        self._send_goal_future = self._action_client.send_goal_async(
-            goal_msg, feedback_callback=self.feedback_callback)
-        
-        self._send_goal_future.add_done_callback(self.goal_response_callback)
-        
-    def goal_response_callback(self, future):
-        goal_handle = future.result()
-        if not goal_handle.accepted:
-            self.get_logger().error("❌ Executer가 실행을 거부했습니다.")
-            self.state = "IDLE"
-            return
-        
-        self._get_result_future = goal_handle.get_result_async()
-        self._get_result_future.add_done_callback(self.get_result_callback)
-        
-    def feedback_callback(self, feedback_msg):
-        feedback = feedback_msg.feedback
-        
-        # step 인덱스 추적
-        self.current_step_index = self.sliced_offset + (feedback.current_step - 1)
-        actual_step = self.current_step_index + 1                
-        
-        # UI에 표시할 이름 저장 후 상태전송
-        self.last_action_name = feedback.current_action
-        self.publish_status()
-        
-        self.get_logger().info(f"🔄 [진행중: {actual_step}/{len(self.current_sequence)}] {feedback.current_action}")
-        
-    def get_result_callback(self, future):
-        result = future.result().result
-        
-        if result.success:
-            if self.state == "RECOVERING_RESET":
-                self.get_logger().info("✅ 에러 복구(원점 회귀) 성공. 관리자 점검 후 다시 시작해 주세요.")
-            else:
-                self.get_logger().info(f"🎉 시퀀스 완료: {result.message}")
-            
-            self.state = "IDLE"
-            self.retry_count = 0
-            self.last_action_name = "요리 완료"
-            self.publish_status()
-        else:
-            self.get_logger().error(f"🚨 로봇 동작 실패 보고 수신: {result.message}")
-            self.last_error_message = result.message
-            self.handle_error()
-            
-    def handle_error(self):
-        """예외 상황 복구 시나리오"""
-        
-        if self.state == "RECOVERING_RESET":
-            # 원점 회귀조차 실패하면 최후 상태
-            self.state = "RECOVERING_FAIL"
-            self.get_logger().fatal("💀 치명적 오류: 원점 복귀조차 실패했습니다! 관리자 개입이 필수적입니다.")
-            return
-        
-        error_text = getattr(self, 'last_error_message', '알 수 없는 동작 에러')
-        
-        # 일반 재시도 로직
-        if self.retry_count < self.max_retries:
-            self.state = "RECOVERING_RETRY"
-            self.retry_count += 1
-            
-            # DB로 현재 상태 전송
-            self.publish_status(error_msg=f"{error_text} -> 5초 후 재시도합니다. ({self.retry_count}/{self.max_retries})")
-            
-            self.get_logger().warn(f"🛠️ 5초 대기 후 실패한 단계부터 재시도를 시작합니다. (재시도 횟수: {self.retry_count}/{self.max_retries})")
-            
-            # 5초 뒤에 retry_execution을 비동기적으로 실행
-            self.recovery_timer = self.create_timer(5.0, self.retry_execution)
-            
-        # 최대 재시도 초과 시 원점 복귀 시도
-        else:
-            self.get_logger().error("🚨 최대 재시도 횟수(2회) 초과! 원점(Home) 복귀를 시도합니다.")
-            self.try_reset()
-    
-    def retry_execution(self):
-        """5초 대기 후 호출되어 남은 시퀸스"""
-        if self.recovery_timer:
-            self.recovery_timer.cancel()    # 1회용 타이머 정지
-        
-        self.get_logger().info(f"🔄 중단된 지점(Step {self.current_step_index + 1})부터 재시작합니다.")
-        
-        self.sliced_offset = self.current_step_index
-        remaining_sequence = self.current_sequence[self.current_step_index:]
-        self.send_goal_to_executer(remaining_sequence)
-        
-    def try_reset(self):
-        """복구용 원점 회귀 시퀀스 전송"""
-        reset_sequence = [{
-            "action": "reset", 
-            "params": {}, 
-            "desc": "에러 복구 원점 회귀"
-            }]
+            if cmd == "ESTOP":
+                self.get_logger().fatal("🛑 [ADMIN] 관리자 수동 비상 정지(E-STOP) 요청 접수!")
+                self.trigger_estop()
                 
-        self.state = "RECOVERING_RESET"
-        self.publish_status(error_msg="최대 재시도 초과. 안전을 위해 원점 복구를 진행합니다.")
-        self.send_goal_to_executer(reset_sequence, is_recovery=True)
-    
-    def unlock_callback(self, request, response):
-        """관리자 개입 후 시스템 잠금을 해제하는 콜백"""   
-        if self.state in ["ADMIN_INTERVENTION", "ERROR", "RECOVERING_FAIL"]:
-            self.state = "IDLE"
-            self.retry_count = 0
-            
-            self.get_logger().info("🔓 [ADMIN] 관리자에 의해 시스템 잠금이 해제되었습니다. 다시 명령을 받을 수 있습니다.")
-            
-            # 잠금 해제 시 에러 메시지 초기화 후 상태 퍼블리시
-            self.publish_status(error_msg="")
-            
-            response.success = True
-            response.message = "System unlocked successfully."
+            elif cmd == "UNLOCK":
+                self.get_logger().info("🔓 [ADMIN] 관리자 시스템 잠금 해제(UNLOCK) 요청 접수!")
+                self.trigger_unlock()
+                
+        except Exception as e:
+            self.get_logger().warn(f"관리자 명령 파싱 실패: {e}")
+
+    # ==========================================
+    # 🤖 하드웨어 제어 로직
+    # ==========================================
+    def trigger_estop(self):
+        """로봇 강제 정지 및 시스템 잠금"""
+        self.is_locked = True
+        
+        if self.estop_cli.wait_for_service(timeout_sec=1.0):
+            req = SetRobotControl.Request()
+            req.robot_control = 2 # 로봇 제어 권한 탈취 후 강제 보호 정지(Safe Stop)
+            self.estop_cli.call_async(req)
+            self.get_logger().error("🛑 로봇 하드웨어 보호 정지 명령 전송 완료. (시스템 잠금 상태)")
         else:
-            self.get_logger().warn(f"⚠️ 현재 시스템이 잠겨있지 않습니다. (현재 상태: {self.state})")
-            response.success = False
-            response.message = "System is not in a locked state."
+            self.get_logger().error("⚠️ 비상 정지 서비스를 찾을 수 없습니다!")
+
+    def trigger_unlock(self):
+        """로봇 알람 해제, 서보 온 및 시스템 잠금 해제"""
+        if self.estop_cli.wait_for_service(timeout_sec=1.0):
+            # 1. 에러 알람 초기화 (Reset)
+            req_reset = SetRobotControl.Request()
+            req_reset.robot_control = 2 # 이전 base_action.py의 clear_alarm 로직과 동일
+            self.estop_cli.call_async(req_reset)
+            self.get_logger().info("⏳ 1/2: 로봇 알람 리셋 명령 전송")
             
-        return response
-    
-    def publish_status(self, error_msg=""):
-        """현재 로봇 상태 JSON으로 묶어 퍼블리싱"""
-        status_data = {
-            "state": self.state,  # IDLE, EXECUTING, ERROR, RECOVERING 등
-            "current_step": self.current_step_index + 1 if self.current_sequence else 0,
-            "total_steps": len(self.current_sequence),
-            "current_action": getattr(self, 'last_action_name', "대기 중"),
-            "error_msg": error_msg
-        }
-        
-        msg = String()
-        msg.data = json.dumps(status_data, ensure_ascii=False)
-        self.status_pub.publish(msg)
-        
-    
-    
+            time.sleep(0.5) # 하드웨어 반영 대기
+            
+            # 2. 서보 모터 다시 켜기 (Servo ON)
+            req_servo = SetRobotControl.Request()
+            req_servo.robot_control = 3 
+            self.estop_cli.call_async(req_servo)
+            self.get_logger().info("⏳ 2/2: 로봇 서보 ON 명령 전송")
+            
+            # 3. 내부 시스템 잠금 해제
+            self.is_locked = False
+            self.last_heartbeat = time.time() # 심박수 초기화
+            self.get_logger().info("✅ 시스템 잠금 해제 완료! 정상 작동을 재개할 수 있습니다.")
+        else:
+            self.get_logger().error("⚠️ 제어 서비스를 찾을 수 없어 Unlock에 실패했습니다.")
+
 def main(args=None):
     rclpy.init(args=args)
     node = StateManager()
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
-
-if __name__ == "__main__":
-    main()
+    try: rclpy.spin(node)
+    except: pass
+    finally: rclpy.shutdown()
