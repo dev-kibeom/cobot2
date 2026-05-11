@@ -380,13 +380,26 @@ class DSRobotController:
     def get_current_posx(self):
         from DSR_ROBOT2 import get_current_posx
 
-        pos, _ = get_current_posx()
+        result = get_current_posx()
+
+        if isinstance(result, tuple):
+            pos = result[0]
+        else:
+            pos = result
+
         print(pos)
         return pos
+
 
     def get_current_posj(self):
         from DSR_ROBOT2 import get_current_posj
 
-        joint, _ = get_current_posj()
+        result = get_current_posj()
+
+        if isinstance(result, tuple):
+            joint = result[0]
+        else:
+            joint = result
+
         print(joint)
         return joint

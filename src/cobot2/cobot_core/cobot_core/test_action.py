@@ -17,36 +17,47 @@ class TestVoiceCommand(Node):
                 "params": {},
                 "desc": "reset",
             },
+            # {
+            #     "action": "place",
+            #     "params":{'target':'right_box'},
+            #     "decs":"right"
+            # },
+            # {
+            #     "action": "place",
+            #     "params":{'target':'left_box'},
+            #     "decs":"right"
+            # },
+            # {
+            #     "action": "movel",
+            #     "params": {'pos':[0,0,0,0,45,90], 'vel':50, 'acc':50, 'mode':'rel', 'ref':'tool'},
+            #     "desc": "movel",
+            # },
+            # {
+            #     "action": "pick_vertical",
+            #     "params": {'target':'shaker'},
+            #     "desc": "pick_horizontal",
+            # },
             {
-                "action": "place",
-                "params":{'target':'right_box'},
-                "decs":"right"
+                "action": "pour",
+                "params": {},
+                "desc": "pour",
             },
-            {
-                "action": "place",
-                "params":{'target':'left_box'},
-                "decs":"right"
-            },
+            # {
+            #     "action": "reset",
+            #     "params": {},
+            #     "desc": "reset",
+            # },
+
+            # {
+            #     "action": "pour",
+            #     "params": {},
+            #     "desc": "pour",
+            # },
             # {
             #     "action": "trash",
             #     "params": {},
-            #     "desc": "pick_horizontal",
+            #     "desc": 'trash'
             # },
-            # {
-            #     "action": "movej",
-            #     "params": {'joint':[0,0,0,0,0,90], 'acc':100, 'vel':100, 'mode':'rel'},
-            #     "desc": "pick_side",
-            # },
-            # {
-            #     "action": "pour",
-            #     "params": {'target':'plate'},
-            #     "desc": "pour",
-            # },
-            {
-                "action": "trash",
-                "params": {},
-                "desc": 'trash'
-            },
             {
                 "action": "reset",
                 "params": {},
