@@ -2,6 +2,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from launch.actions import TimerAction
 
 def generate_launch_description():
     # 1. 통합 파라미터 파일(params.yaml) 경로 가져오기
@@ -26,7 +27,7 @@ def generate_launch_description():
         output='screen',
         parameters=[params_file]
     )
-
+    
     # [비전 파트]
     vision_node = Node(
         package='object_detection',
@@ -36,18 +37,24 @@ def generate_launch_description():
         parameters=[params_file]
     )
 
-    ui_bridge_node = Node(
-        package='ui_bridge',
-        executable='ui_bridge',
-        name='ui_bridge',
+    bt_manager_node = Node(
+        package='bt_manager',
+        executable='bt_manager',  # CMakeLists.txt의 add_executable 이름
+        name='bt_manager',
         output='screen',
-        parameters=[params_file]
+        parameters=[params_file]  # 필요시 파라미터 공유
     )
-    
+
+    # 💡 꿀팁: 몸통, 비전, 음성 노드가 켜질 시간을 벌어주기 위해 두뇌는 4초 뒤에 켭니다.
+    delayed_bt_manager = TimerAction(
+        period=4.0, 
+        actions=[bt_manager_node]
+    )
+
     # 3. 위에서 정의한 모든 노드를 하나의 Launch Description으로 묶어서 반환
     return LaunchDescription([
         executer_node,
         state_manager_node,
         vision_node,
-        ui_bridge_node
+        delayed_bt_manager
     ])
