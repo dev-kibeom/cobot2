@@ -106,7 +106,7 @@ class ActionManager():
         """actions 폴더 내의 모든 액션들을 자동으로 등록"""
         # 파일 임포트
         for _, name, _ in pkgutil.iter_modules(logical_actions.__path__):
-            full_module_name = f"cobot_core.actions.{name}"
+            full_module_name = f"cobot_core.actions.logical_actions.{name}"
             importlib.import_module(full_module_name)
         
         # 액션 등록

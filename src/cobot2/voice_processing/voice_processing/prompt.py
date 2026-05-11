@@ -52,7 +52,8 @@ JSON만 출력. 다른 텍스트 금지.
 9. 객체는 영어로(apple/orange/shaker/plate/pear/banana/toy_block), 위치도 영어로(left_box/right_box) 발행.
 10. 카탈로그에 없는 액션이나 지원하지 않는 값을 요청하면 sequence 는 [], reply 는 거절 멘트.
 11. step 번호는 1부터 순차.
- 
+12. 모든 동작 수행전에는 'reset' 동작 수행 후 수행
+
 [예시]
 사용자: "사과 버려줘"
 {{"sequence":[{{"step":1,"action":"pick_vertical","params":{{"target":"apple"}}}},{{"step":2,"action":"trash","params":{{}}}},{{"step":3,"action":"reset","params":{{}}}}],"reply":"네, 사과를 쓰레기통에 버리겠습니다."}}

@@ -55,6 +55,7 @@ def speak(text: str, voice: str = "onyx", model: str = "tts-1"):
 
 class VoiceClient(Node):
     def __init__(self):
+        super().__init__('voice_client')
         
         self.declare_parameter('tts_model', 'tts-1')
         self.declare_parameter('tts_voice', 'onyx')
