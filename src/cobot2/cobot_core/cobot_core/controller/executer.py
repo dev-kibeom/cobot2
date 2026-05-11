@@ -29,13 +29,10 @@ class CommandExecuter(Node):
     self.declare_parameter('acc_angular', 70.0)
 
     # 그리퍼 관련 파라미터
-    self.declare_parameter('gripper_ip', '192.168.1.100') # 실제 할당된 IP로 변경 필요
-    self.declare_parameter('gripper_port', 502)
-    self.declare_parameter('gripper_type', 'rg2')
     self.declare_parameter('depth_offset', -35.0)
-    self.declare_parameter('min_depth', 30.0)
-    self.declare_parameter('tilt_angle', 5.0)
-    self.declare_parameter('gripper_length', 150.0)
+    self.declare_parameter('min_depth', 15.0)
+    self.declare_parameter('tilt_angle', -5.0)
+    self.declare_parameter('gripper_length', 35.0)
     
     self._update_local_parameters()
     
