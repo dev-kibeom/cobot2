@@ -2,7 +2,6 @@
 
 from pymodbus.client.sync import ModbusTcpClient as ModbusClient
 
-
 class RG():
 
     def __init__(self, gripper, ip, port):

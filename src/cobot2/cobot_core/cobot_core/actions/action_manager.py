@@ -4,7 +4,7 @@ import numpy as np
 import rclpy
 import importlib
 import pkgutil
-import cobot_core.actions as actions
+import cobot_core.actions.logical_actions as logical_actions
 
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from ament_index_python.packages import get_package_share_directory
@@ -27,10 +27,22 @@ class ActionManager():
         self.vision_client = self.node.create_client(GetTargetPose, '/get_3d_position',
                                                      callback_group=self.cb_group)
         
+        # OnRobot 그리퍼 Modbus TCP 단일 연결
+        try:
+            from cobot_core.controller.onrobot import RG
+            gripper_ip = self.node.get_parameter('gripper_ip').value
+            gripper_port = self.node.get_parameter('gripper_port').value
+            gripper_type = self.node.get_parameter('gripper_type').value
+            
+            self.gripper = RG(gripper_type, gripper_ip, gripper_port)
+            self.node.get_logger().info(f"✅ OnRobot {gripper_type.upper()} Modbus 연결 성공 ({gripper_ip}:{gripper_port})")
+        except Exception as e:
+            self.node.get_logger().error(f"⚠️ 그리퍼 통신 연결 실패: {e}")
+            self.gripper = None
+            
         # Hand-Eye 캘리브레이션 행렬 로드
         package_path = get_package_share_directory("cobot_core")
         matrix_path = os.path.join(package_path, "resource", "T_gripper2camera.npy")
-        
         try:
             self.T_gripper2cam = np.load(matrix_path)
             self.node.get_logger().info("✅ Hand-Eye 캘리브레이션 매트릭스 로드 완료.")
@@ -93,7 +105,7 @@ class ActionManager():
     def _register_custom_actions(self):
         """actions 폴더 내의 모든 액션들을 자동으로 등록"""
         # 파일 임포트
-        for _, name, _ in pkgutil.iter_modules(actions.__path__):
+        for _, name, _ in pkgutil.iter_modules(logical_actions.__path__):
             full_module_name = f"cobot_core.actions.{name}"
             importlib.import_module(full_module_name)
         
