@@ -16,16 +16,16 @@ class Place(BaseAction):
 
         if 'target' == 'right_box':
             if not self.manager.perform('movej', joint=[-79,13,78,0,88,-78], mode='abs', acc= 150, vel=150): return False
-        if 'target' == 'left_box':
+        elif 'target' == 'left_box':
             if not self.manager.perform('movej', joint=[-39,47,25,0,108,-38], mode='abs', acc= 150, vel=150): return False
-        # if not self.manager.perform('movel', pos=pos, mode='abs'): return False
-        # if not self.manager.perform('movel', pos=[0,0,-height,0,0,0], mode='rel'): return False
+
         if not self.manager.perform('gripper_open'): return False
         if not self.manager.perform('movel', pos=[0,0,-100,0,0,0], mode='rel', ref='tool'): return False
         
         return True
 
-
+        # if not self.manager.perform('movel', pos=pos, mode='abs'): return False
+        # if not self.manager.perform('movel', pos=[0,0,-height,0,0,0], mode='rel'): return False
         # 쓰레기통 [-190,10,85,0,85,-190]
         # 오른쪽 [-79,13,78,0,88,-78]
         # 왼쪽 [-39,47,25,0,108,-38]

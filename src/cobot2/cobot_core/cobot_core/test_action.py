@@ -27,11 +27,11 @@ class TestVoiceCommand(Node):
                 "params":{'target':'left_box'},
                 "decs":"right"
             },
-            # {
-            #     "action": "pick_horizontal",
-            #     "params": {'target':'shaker'},
-            #     "desc": "pick_horizontal",
-            # },
+            {
+                "action": "trash",
+                "params": {},
+                "desc": "pick_horizontal",
+            },
             # {
             #     "action": "pick_side",
             #     "params": {'target':'shaker'},
