@@ -1,12 +1,37 @@
 [
   {
-    "command": "사과 흔들어서 버려줘",
+    "command": "접시를 집어서 왼쪽박스 둬",
     "sequence": [
       {
         "step": 1,
-        "action": "pick",
+        "action": "pick_side",
         "params": {
-          "target": "apple"
+          "target": "plate"
+        }
+      },
+      {
+        "step": 2,
+        "action": "place",
+        "params": {
+          "target": "left_box"
+        }
+      },
+      {
+        "step": 3,
+        "action": "reset",
+        "params": {}
+      }
+    ],
+    "reply": "네, 접시를 집어서 왼쪽 박스에 두겠습니다."
+  },
+  {
+    "command": "후추통 집고 흔들고 쓰레기통에 버려",
+    "sequence": [
+      {
+        "step": 1,
+        "action": "pick_horizontal",
+        "params": {
+          "target": "shaker"
         }
       },
       {
@@ -16,10 +41,8 @@
       },
       {
         "step": 3,
-        "action": "place",
-        "params": {
-          "target": "쓰레기통"
-        }
+        "action": "trash",
+        "params": {}
       },
       {
         "step": 4,
@@ -27,41 +50,23 @@
         "params": {}
       }
     ],
-    "reply": "네, 사과를 흔들어서 쓰레기통에 버리겠습니다."
+    "reply": "네, 후추통을 집고 흔들고 쓰레기통에 버리겠습니다."
   },
   {
-    "command": "안경 톡톡 두드려",
+    "command": "레고를 집어서 오른쪽박스에 넣어줘",
     "sequence": [
       {
         "step": 1,
-        "action": "tap",
+        "action": "pick_vertical",
         "params": {
-          "target": "glasses"
-        }
-      },
-      {
-        "step": 2,
-        "action": "reset",
-        "params": {}
-      }
-    ],
-    "reply": "네, 안경을 톡톡 두드리겠습니다."
-  },
-  {
-    "command": "컵 집어서 쓰레기통에 버려줘",
-    "sequence": [
-      {
-        "step": 1,
-        "action": "pick_side",
-        "params": {
-          "target": "cup"
+          "target": "toy_block"
         }
       },
       {
         "step": 2,
         "action": "place",
         "params": {
-          "target": "쓰레기통"
+          "target": "right_box"
         }
       },
       {
@@ -70,6 +75,6 @@
         "params": {}
       }
     ],
-    "reply": "네, 컵을 쓰레기통에 버리겠습니다."
+    "reply": "네, 레고를 집어서 오른쪽 박스에 넣겠습니다."
   }
 ]
