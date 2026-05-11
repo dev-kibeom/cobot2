@@ -1,7 +1,7 @@
 # -----------------------------------------------
-# 1. 로봇 제어 및 동작 파라미터 (command_executer)
+# 1. 로봇 제어 및 동작 파라미터 (executer)
 # -----------------------------------------------
-command_executer:
+executer:
   ros__parameters:
     # 기본 이동 속도 및 가속도 (base_action.py)
     vel_linear: 200.0
