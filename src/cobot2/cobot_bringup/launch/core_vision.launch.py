@@ -36,9 +36,18 @@ def generate_launch_description():
         parameters=[params_file]
     )
 
+    ui_bridge_node = Node(
+        package='ui_bridge',
+        executable='ui_bridge',
+        name='ui_bridge',
+        output='screen',
+        parameters=[params_file]
+    )
+    
     # 3. 위에서 정의한 모든 노드를 하나의 Launch Description으로 묶어서 반환
     return LaunchDescription([
         executer_node,
         state_manager_node,
-        vision_node
+        vision_node,
+        ui_bridge_node
     ])

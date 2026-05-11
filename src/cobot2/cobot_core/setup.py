@@ -32,7 +32,8 @@ setup(
         'console_scripts': [
             'state_manager = cobot_core.state_manager:main',
             'executer = cobot_core.controller.executer:main',
-            'test_action = cobot_core.test_action:main',
+            'ui_bridge = cobot_core.ui_bridge:main',
+            'test_action = cobot_core.test_action:main'
         ],
     },
 )
