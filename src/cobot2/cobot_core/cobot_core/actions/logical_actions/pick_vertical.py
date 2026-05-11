@@ -1,7 +1,7 @@
 from ..base_action import BaseAction
 
 class PickVertical(BaseAction):
-    action_name = 'pick'
+    action_name = 'pick_vertical'
 
     def execute(self, target=None):
         logger = self.manager.node.get_logger()
@@ -32,5 +32,8 @@ class PickVertical(BaseAction):
         
         lift_pos = [tx, ty, tz + 150.0, rx, ry, rz]
         if not self.manager.perform('movel', pos=lift_pos, mode='abs'): return False
+        
+        # 붓기를 위한 임시
+        if not self.manager.perform('movej', joint=[0,0,90,0,90,0], acc=100, vel=100, mode='abs'): return False
 
         return True
