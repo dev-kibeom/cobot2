@@ -12,22 +12,12 @@ class TestVoiceCommand(Node):
 
     def publish_test_sequence(self):
         sequence = [
-            # {
-            #     "action": "reset",
-            #     "params": {},
-            #     "desc": "reset",
-            # },
-            # {
-            #     "action": "finding",
-            #     "params": {'target':'shaker'},
-            #     "desc": "shaker 탐색중",
-            # },
-            
-            # {
-            #     "action": "movesx",
-            #     "params": {'poses':[[0, -10, 10, 0, 0, 0],[0, -10, -10, 0, 0, 0],[0, 0, -10, 0, 0, 0]], 'mode':'rel'},
-            #     "desc": "1123123123123123",
-            # },
+            {
+                "action": "tap",
+                "params": {'target':'toy_block'
+                    },
+                'decs' : '찍기'
+            },
             {
                 "action": "pick_horizontal",
                 "params": {'target':'apple'
@@ -35,16 +25,27 @@ class TestVoiceCommand(Node):
                 "desc": '잡기'
             },
             {
-                "action": "shake",
-                "params": {
-                    },
-                'decs' : '흔들기'
-            },
-            {
                 "action": "trash",
                 "params": {
                     },
                 'decs' : '버리기'
+            },
+            {
+                "action": "reset",
+                "params": {},
+                "desc": "reset",
+            },
+            {
+                "action": "pick_horizontal",
+                "params": {'target':'shaker'
+                    },
+                "desc": '잡기'
+            },
+            {
+                "action": "shake",
+                "params": {
+                    },
+                "desc": '흔들기'
             },
             {
                 "action": "reset",
