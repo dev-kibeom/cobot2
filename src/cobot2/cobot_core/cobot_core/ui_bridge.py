@@ -1,67 +1,65 @@
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 import json
 import time
-from std_msgs.msg import String 
+from std_msgs.msg import String
+from rcl_interfaces.msg import Log
 
 class UIBridgeNode(Node):
     def __init__(self):
         super().__init__('ui_bridge_node')
         
         # [설정 스위치]
-        self.TEST_MODE = True 
-        
+        self.TEST_MODE = True
+
         # 상태 log
         self.system_state = {
-            "state": "IDLE",
-            "current_action": "대기 중",
-            "dsr_log": "",
-            "stt_result": "",
+            "status":        "",
+            "stt_result":    "",
             "voice_command": "",
-            "detection": "NONE",
-            "last_update": ""
+            "detection":     "",
+            "rosout":        "",
+            "last_update":   ""
         }
 
         self.get_logger().info(f"🌉 UI Bridge 가동 (테스트 모드: {self.TEST_MODE})")
 
+        rosout_qos = QoSProfile(
+            depth=100,
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+        )
+
         # 정보 통합 (Input)
-        self.create_subscription(String, 'dsr_log', self.dsr_cb, 10)
+        self.create_subscription(Log, '/rosout', self.rosout_cb, rosout_qos)
         self.create_subscription(String, '/stt_result', self.stt_cb, 10)
         self.create_subscription(String, '/voice_command', self.cmd_cb, 10)
         self.create_subscription(String, '/status', self.status_cb, 10)
         self.create_subscription(String, '/detection', self.detection_cb, 10)
 
-        # 개별 패스스루용 (팀원 테스트용)
-        self.pub_stt_via = self.create_publisher(String, '/stt_result_via', 10)
-        self.pub_cmd_via = self.create_publisher(String, '/voice_command_via', 10)
-        
-        # 통합 상태용 (최종 도커 파싱용)
         self.pub_ui_state = self.create_publisher(String, '/ui_bridge/state', 10)
 
         # 통합 전송 타이머 (10Hz)
-        if not self.TEST_MODE:
-            self.timer = self.create_timer(0.1, self.publish_combined_state)
+        self.timer = self.create_timer(0.1, self.publish_combined_state)
 
-    def dsr_cb(self, msg): self.system_state["dsr_log"] = msg.data
-    
+    _LOG_LEVEL = {10: 'DEBUG', 20: 'INFO', 30: 'WARN', 40: 'ERROR', 50: 'FATAL'}
+
+    def rosout_cb(self, msg: Log):
+        self.system_state["rosout"] = json.dumps({
+            "level": self._LOG_LEVEL.get(msg.level, str(msg.level)),
+            "node":  msg.name,
+            "msg":   msg.msg,
+        }, ensure_ascii=False)
+
     def stt_cb(self, msg):
         self.system_state["stt_result"] = msg.data
-        if self.TEST_MODE: # 테스트 중일 때만 즉시 전달
-            self.pub_stt_via.publish(msg)
 
     def cmd_cb(self, msg):
         self.system_state["voice_command"] = msg.data
-        if self.TEST_MODE:
-            self.pub_cmd_via.publish(msg)
 
     def status_cb(self, msg):
-        try:
-            # state_manager나 executer가 보내는 JSON 파싱
-            data = json.loads(msg.data)
-            self.system_state["state"] = data.get("state", "UNKNOWN")
-            self.system_state["current_action"] = data.get("current_action", "대기 중")
-        except:
-            self.system_state["state"] = msg.data
+        self.system_state["status"] = msg.data
 
     def detection_cb(self, msg):
         self.system_state["detection"] = msg.data
