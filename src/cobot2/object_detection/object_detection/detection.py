@@ -109,7 +109,7 @@ class ObjectDetection(Node):
         
         # 탐지 성공 시 좌표 계산
         cx, cy = map(int, [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2])
-        cz = self._get_depth(cx, cy)
+        cz = self._get_depth(box)
 
         if cz <= 0:
             self.get_logger().warn("⚠️ 깊이(Depth) 값이 범위를 벗어났습니다.")
@@ -124,15 +124,29 @@ class ObjectDetection(Node):
     # ==========================================================
     # 3. 데이터 처리 및 시각화 (Vision Math & Visuals) 블록
     # ==========================================================
-    def _get_depth(self, x, y):
-        """중심점 주변 10x10 영역의 유효한 Depth 중앙값 추출"""
+    def _get_depth(self, box):
+        """금속/반사 재질의 Depth 증발 현상(Blackhole)을 막기 위해 
+           단일 점이 아닌 Bounding Box 중앙 50% 영역의 유효 깊이를 추출합니다."""
         frame = self._wait_for_valid_data(self.img_node.get_depth_frame, "depth frame")
         try:
-            h, w = frame.shape
-            patch = frame[max(0, y-5):min(h, y+5), max(0, x-5):min(w, x+5)]
+            x1, y1, x2, y2 = map(int, box)
+            w, h = x2 - x1, y2 - y1
+            
+            # BBox의 너무 가장자리는 바닥(테이블)일 수 있으므로 중앙 50% 영역만 안전하게 추출
+            px_min, px_max = int(x1 + w*0.25), int(x2 - w*0.25)
+            py_min, py_max = int(y1 + h*0.25), int(y2 - h*0.25)
+            
+            patch = frame[max(0, py_min):min(frame.shape[0], py_max), 
+                          max(0, px_min):min(frame.shape[1], px_max)]
+            
             valid_depths = patch[patch > 0]
-            return float(np.median(valid_depths)) if len(valid_depths) > 0 else 0.0
-        except Exception:
+            
+            if len(valid_depths) > 0:
+                return float(np.median(valid_depths))
+            else:
+                return 0.0
+        except Exception as e:
+            self.get_logger().warn(f"깊이값 계산 에러: {e}")
             return 0.0
 
     def _pixel_to_camera_coords(self, x, y, z):

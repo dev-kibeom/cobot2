@@ -144,12 +144,18 @@ class ActionManager():
         base2gripper = self.get_robot_pose_matrix(x, y, z, rx, ry, rz)
         base2cam = base2gripper @ self.T_gripper2cam
 
-        # 1. Base 좌표로 변환
+        # 1. Base 좌표로 변환 (target_base_coord[2]는 물체의 높이)
         target_base_coord = np.dot(base2cam, coord)[:3]
         
-        # 2. 바닥 충돌 방지 최소 높이(Z) 보정
-        target_base_coord[2] = max(target_base_coord[2], self.node.min_depth)
+        z_top = target_base_coord[2]               # 비전이 측정한 물체 윗면의 높이
+        z_floor = self.node.min_depth              # params.yaml에 정의된 테이블 바닥 높이
 
+        # 바닥과 윗면의 정확히 중간(Center) 높이를 파지점으로 설정
+        z_center = (z_top + z_floor) / 2.0
+
+        # 2. 바닥 충돌 방지 최소 높이(Z) 보정 (안전장치)
+        target_base_coord[2] = max(z_center, z_floor)
+        
         # 3. 6자유도 리스트로 반환 (손목 각도는 현재 상태 유지)
         result_pos = target_base_coord.tolist()
         result_pos.extend([rx, ry, rz])

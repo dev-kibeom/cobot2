@@ -12,16 +12,16 @@ class TestVoiceCommand(Node):
 
     def publish_test_sequence(self):
         sequence = [
-            {
-                "action": "reset",
-                "params": {},
-                "desc": "reset",
-            },
-            {
-                "action": "finding",
-                "params": {'target':'shaker'},
-                "desc": "shaker 탐색중",
-            },
+            # {
+            #     "action": "reset",
+            #     "params": {},
+            #     "desc": "reset",
+            # },
+            # {
+            #     "action": "finding",
+            #     "params": {'target':'shaker'},
+            #     "desc": "shaker 탐색중",
+            # },
             
             # {
             #     "action": "movesx",
@@ -39,6 +39,12 @@ class TestVoiceCommand(Node):
                 "params": {
                     },
                 'decs' : '흔들기'
+            },
+            {
+                "action": "trash",
+                "params": {
+                    },
+                'decs' : '버리기'
             },
             {
                 "action": "reset",

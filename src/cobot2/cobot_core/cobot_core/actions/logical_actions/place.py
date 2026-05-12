@@ -3,7 +3,7 @@ from ..base_action import BaseAction
 class Place(BaseAction):
     action_name = 'place'
 
-    def execute(self, target=None):
+    def execute(self, target=None, **kwargs):
         if not target:
             print("❌ 타겟이 지정되지 않았습니다.")
             return False

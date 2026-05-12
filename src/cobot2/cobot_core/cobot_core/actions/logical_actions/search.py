@@ -3,7 +3,7 @@ from ..base_action import BaseAction
 class Search(BaseAction):
     action_name = 'search'
 
-    def execute(self, target=None):
+    def execute(self, target=None, **kwargs):
         if not target: return False
         
         logger = self.manager.node.get_logger()

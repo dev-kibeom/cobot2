@@ -13,7 +13,7 @@ executer:
     tilt_angle: -5.0
     gripper_length: 0.0
     min_depth: 20.0      # 바닥 충돌 방지 최소 높이 (mm)
-    depth_offset: -35.0  # 계산된 표면 깊이로부터 내려가는 거리 (mm)
+    depth_offset: 0.0  # 계산된 표면 깊이로부터 내려가는 거리 (mm)
 
 # -----------------------------------------------
 # 2. 상태 및 에러 복구 파라미터 (state_manager)

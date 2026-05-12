@@ -3,7 +3,7 @@ from ..base_action import BaseAction
 class Pick_side(BaseAction):
     action_name = 'pick_side'
 
-    def execute(self, target=None):
+    def execute(self, target=None, **kwargs):
         pos = self.manager.get_vision_target(target)
 
         if not pos:

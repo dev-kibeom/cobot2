@@ -40,6 +40,10 @@ public:
                 // 기존 큐 비우기
                 while(!task_queue_.empty()) task_queue_.pop(); 
 
+                // 전체 시퀀스 맨 처음으로 reset 주입
+                task_queue_.push({"reset", "none"});
+                
+                // LLM이 지시한 테스크들을 큐에 순차 삽입
                 for (const auto& item : j_array) {
                     Task t;
                     t.action = item["action"];
