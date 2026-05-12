@@ -1,5 +1,6 @@
 import os
 import cv2
+import json
 import rclpy
 import time
 import numpy as np
@@ -11,6 +12,7 @@ from rclpy.executors import MultiThreadedExecutor
 from ament_index_python.packages import get_package_share_directory
 
 from sensor_msgs.msg import CompressedImage
+from std_msgs.msg import String
 from od_msg.srv import GetTargetPose
 from object_detection.realsense import ImgNode
 from object_detection.yolo import YoloModel
@@ -68,6 +70,7 @@ class ObjectDetection(Node):
         
         self.annotated_pub = self.create_publisher(CompressedImage, '/detection/annotated_image/compressed', 10)
         self.depth_vis_pub = self.create_publisher(CompressedImage, '/detection/depth_visual/compressed', 10)
+        self.detection_pub = self.create_publisher(String, '/detection', 10)
         self.snapshot_timer = self.create_timer(1.0, self.publish_snapshot_loop)
 
     # ==========================================================
@@ -105,8 +108,9 @@ class ObjectDetection(Node):
         # 탐지 실패 시
         if box is None or score is None:
             self._process_visuals(color_frame, depth_frame, None, target, None, None)
+            self._publish_detection(target, None, 0.0, None)
             return 0.0, 0.0, 0.0
-        
+
         # 탐지 성공 시 좌표 계산
         cx, cy = map(int, [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2])
         cz = self._get_depth(box)
@@ -114,10 +118,12 @@ class ObjectDetection(Node):
         if cz <= 0:
             self.get_logger().warn("⚠️ 깊이(Depth) 값이 범위를 벗어났습니다.")
             self._process_visuals(color_frame, depth_frame, box, target, score, None)
+            self._publish_detection(target, box, score, None)
             return 0.0, 0.0, 0.0
 
         coords = self._pixel_to_camera_coords(cx, cy, cz)
         self._process_visuals(color_frame, depth_frame, box, target, score, coords)
+        self._publish_detection(target, box, score, coords)
 
         return coords
 
@@ -195,6 +201,19 @@ class ObjectDetection(Node):
         # ROS 퍼블리시 상태 업데이트
         self.last_color_vis = vis
         self.last_depth_vis = depth_vis
+
+    def _publish_detection(self, target, box, score, coords):
+        """/detection 토픽에 탐지 결과를 JSON String으로 발행"""
+        payload = {
+            'object_name': target,
+            'detected':    coords is not None,
+            'confidence':  round(float(score), 4) if score is not None else 0.0,
+            'bbox':        [round(float(v), 1) for v in box] if box is not None else None,
+            'position':    [round(float(v), 4) for v in coords] if coords is not None else None,
+        }
+        msg = String()
+        msg.data = json.dumps(payload, ensure_ascii=False)
+        self.detection_pub.publish(msg)
 
     # ==========================================================
     # 4. 유틸리티 (Utility) 블록
