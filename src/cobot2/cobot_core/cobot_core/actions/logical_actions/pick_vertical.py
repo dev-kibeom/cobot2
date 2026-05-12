@@ -27,6 +27,8 @@ class PickVertical(BaseAction):
             
         tx, ty, tz, rx, ry, rz = fine_pos
         
+        self.gripper_open()
+        
         # 동적 안전 한계선 적용
         dynamic_limit = self.get_dynamic_min_depth(ry)
         grip_pos_z = tz + self.depth_offset

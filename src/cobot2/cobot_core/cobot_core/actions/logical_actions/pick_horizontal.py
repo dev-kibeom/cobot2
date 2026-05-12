@@ -24,7 +24,9 @@ class PickHorizontal(BaseAction):
             if not fine_pos: return False
             
         tx, ty, tz, _, _, _ = fine_pos
-
+        
+        self.gripper_open()
+        
         # ==========================================
         # 3. 손목 비틀기 (MoveJ) 및 자세 업데이트
         # ==========================================

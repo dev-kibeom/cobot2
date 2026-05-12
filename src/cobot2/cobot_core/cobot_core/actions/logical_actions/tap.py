@@ -3,7 +3,7 @@ from ..base_action import BaseAction
 class Tap(BaseAction):
     action_name = 'tap'
 
-    def execute(self,target=None, **kwargs):
+    def execute(self, target=None, **kwargs):
         pos = self.manager.get_vision_target(target)
 
         if not pos:
