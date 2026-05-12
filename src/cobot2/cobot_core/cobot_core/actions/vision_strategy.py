@@ -2,7 +2,7 @@ import math
 
 class VisionStarategy:
     
-    def coarse_to_fine(self, target, z_offset=250.0):
+    def coarse_to_fine(self, target, z_offset=380.0):
         """2-Step Visual Servoing: 1차 탐지 -> 카메라 렌즈를 타겟 정상공에 정렬 -> 2차 정밀 탐지"""
         logger = self.manager.node.get_logger()
         

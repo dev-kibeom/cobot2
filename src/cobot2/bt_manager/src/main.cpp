@@ -3,6 +3,7 @@
 #include <behaviortree_cpp_v3/bt_factory.h>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <nlohmann/json.hpp>
+#include <algorithm>
 
 using json = nlohmann::json;
 
@@ -34,18 +35,30 @@ int main(int argc, char **argv) {
     std::string xml_path = pkg_share + "/config/bt_cobot2.xml";
     
     auto tree = factory.createTreeFromFile(xml_path);
-    
-    // 초기 블랙보드 비우기
     tree.rootBlackboard()->set("llm_json", "");
+    tree.rootBlackboard()->set("estop_flag", false);
 
-    // =====================================================================
-    // 💡 [핵심] ROS 2 토픽을 받아서 BT 블랙보드에 연결해주는 Subscriber 생성
-    // =====================================================================
+    // BT 일시정지를 위한 제어 플래그
+    bool is_paused = false;
+
+    // 외부 명령 수신용 Subscriber (LLM)
     auto subscription = ros_node->create_subscription<std_msgs::msg::String>(
         "/voice_command", 10,
         [&tree, ros_node](const std_msgs::msg::String::SharedPtr msg) {
             RCLCPP_INFO(ros_node->get_logger(), "📨 외부 명령 수신! BT 블랙보드 업데이트...");
             tree.rootBlackboard()->set("llm_json", msg->data);
+        });
+
+    // 관리자 UI 명령(E-STOP/UNLOCK) 수신용 Subscriber 추가
+    auto admin_sub = ros_node->create_subscription<std_msgs::msg::String>(
+        "/admin_command", 10,
+        [&tree, ros_node](const std_msgs::msg::String::SharedPtr msg) {
+            json data = json::parse(msg->data);
+            std::string cmd = data.value("command", "");
+            if (cmd == "ESTOP") {
+                RCLCPP_FATAL(ros_node->get_logger(), "🛑 비상 정지! 시퀀스 리셋 준비.");
+                tree.rootBlackboard()->set("estop_flag", true); // 💡 BT에 리셋 지시
+            }
         });
 
     auto status_pub = ros_node->create_publisher<std_msgs::msg::String>("/status", 10);
@@ -56,7 +69,10 @@ int main(int argc, char **argv) {
     BT::NodeStatus status = BT::NodeStatus::IDLE;
 
     while (rclcpp::ok()) {
-        status = tree.tickRoot();
+        // 💡 3. 일시정지 상태가 아닐 때만 트리를 동작시킵니다.
+        if (!is_paused) {
+            status = tree.tickRoot();
+        }
 
         std::string action = "none";
         std::string target = "none";
@@ -64,7 +80,8 @@ int main(int argc, char **argv) {
         try { target = tree.rootBlackboard()->get<std::string>("target"); } catch (...) {}
 
         json payload;
-        payload["state"]  = BT::toStr(status);
+        // 멈춰있을 땐 도커 화면에 PAUSED로 띄워줌
+        payload["state"]  = is_paused ? "PAUSED" : BT::toStr(status);
         payload["action"] = action;
         payload["target"] = target;
 
@@ -77,7 +94,6 @@ int main(int argc, char **argv) {
     }
 
     RCLCPP_INFO(ros_node->get_logger(), "🏁 Behavior Tree 실행 종료. 최종 상태: %s", BT::toStr(status).c_str());
-
     rclcpp::shutdown();
     return 0;
 }
