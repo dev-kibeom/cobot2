@@ -3,7 +3,7 @@ from ..base_action import BaseAction
 class OpenCap(BaseAction):
     action_name = 'open_cap'
 
-    def execute(self, pos):
+    def execute(self, pos, ):
         if not self.manager.perform('movel', pos=pos): return False
         if not self.manager.perform('compliance_on', stx=[3000, 3000, 500, 200, 200, 200]): return False
         if not self.manager.perform('movel', pos=[0, 0, 0, 0, 0, 90], mode='rel'): return False

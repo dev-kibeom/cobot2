@@ -4,7 +4,7 @@ import time
 class Finding(BaseAction):
     action_name = 'finding'
 
-    def execute(self, target=None, max_try=3, x_step=150, wait_time=0.5):
+    def execute(self, target=None, max_try=3, x_step=150, wait_time=0.5, **kwargs):
         if not target:
             print("❌ [finding] target 이름이 없습니다.")
             return False

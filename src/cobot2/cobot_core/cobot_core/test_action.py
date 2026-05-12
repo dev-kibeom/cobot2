@@ -41,6 +41,12 @@ class TestVoiceCommand(Node):
                 'decs' : '흔들기'
             },
             {
+                "action": "trash",
+                "params": {
+                    },
+                'decs' : '버리기'
+            },
+            {
                 "action": "reset",
                 "params": {},
                 "desc": "reset",

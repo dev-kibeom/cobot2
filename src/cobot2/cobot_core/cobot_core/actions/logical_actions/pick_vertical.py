@@ -3,7 +3,7 @@ from ..base_action import BaseAction
 class PickVertical(BaseAction):
     action_name = 'pick_vertical'
 
-    def execute(self, target=None):
+    def execute(self, target=None, **kwargs):
         logger = self.manager.node.get_logger()
         logger.info(f"🔎 '{target}'수직 집기(pick) 시작...")
         

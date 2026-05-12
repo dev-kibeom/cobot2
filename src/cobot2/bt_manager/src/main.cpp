@@ -8,6 +8,7 @@
 #include "ExecutePythonAction.hpp"
 #include "IsTargetLocated.hpp"
 #include "IsObjectGripped.hpp"
+#include "IsResetAction.hpp"
 
 int main(int argc, char **argv) {
     rclcpp::init(argc, argv);
@@ -19,7 +20,8 @@ int main(int argc, char **argv) {
     factory.registerNodeType<IsTargetRequired>("IsTargetRequired");
     factory.registerNodeType<IsTargetLocated>("IsTargetLocated"); 
     factory.registerNodeType<IsObjectGripped>("IsObjectGripped"); 
-
+    factory.registerNodeType<IsResetAction>("IsResetAction");
+    
     BT::NodeBuilder execute_builder = [ros_node](const std::string& name, const BT::NodeConfiguration& config) {
         return std::make_unique<ExecutePythonAction>(name, config, ros_node);
     };

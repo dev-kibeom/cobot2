@@ -5,16 +5,26 @@
             <Sequence>
                 <Action ID="PopNextTask" llm_json="{llm_json}" action_name="{action}" target_name="{target}"/>
                 
-                <Fallback name="SearchTargetSelector">
-                    <Inverter>
-                        <Condition ID="IsTargetRequired" target_name="{target}"/>
-                    </Inverter>
+                <Fallback name="ActionPreparation">
                     
-                    <Fallback name="SearchLogic">
-                        <Condition ID="IsTargetLocated" target_name="{target}"/>
-                        <Action ID="ExecutePythonAction" action_name="detect_in_place" target_name="{target}"/>
-                        <Action ID="ExecutePythonAction" action_name="finding" target_name="{target}"/>
-                    </Fallback>
+                    <Sequence name="TargetRequiredBranch">
+                        <Condition ID="IsTargetRequired" target_name="{target}"/>
+                        <Fallback name="SearchLogic">
+                            <Condition ID="IsTargetLocated" target_name="{target}"/>
+                            <Action ID="ExecutePythonAction" action_name="detect_in_place" target_name="{target}"/>
+                            <Action ID="ExecutePythonAction" action_name="finding" target_name="{target}"/>
+                        </Fallback>
+                    </Sequence>
+                    
+                    <Sequence name="NoTargetBranch">
+                        <Inverter>
+                            <Condition ID="IsTargetRequired" target_name="{target}"/>
+                        </Inverter>
+                        <Fallback name="GripVerification">
+                            <Condition ID="IsResetAction" action_name="{action}"/>
+                            <Action ID="ExecutePythonAction" action_name="check_grip" target_name="none"/>
+                        </Fallback>
+                    </Sequence>
                 </Fallback>
 
                 <Action ID="ExecutePythonAction" action_name="{action}" target_name="{target}"/>
@@ -28,6 +38,9 @@
             <input_port default="{target}" name="target_name"/>
         </Action>
         <Condition ID="IsObjectGripped"/>
+        <Condition ID="IsResetAction">
+            <input_port name="action_name"/>
+        </Condition>
         <Condition ID="IsTargetLocated">
             <input_port default="{target}" name="target_name"/>
         </Condition>

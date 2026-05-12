@@ -5,7 +5,7 @@ class Pour(BaseAction):
     """용기를 자연스럽게 기울여 내용물을 붓고 제자리로 돌아오는 동작"""
     action_name = 'pour'
 
-    def execute(self):  
+    def execute(self, target=None, **kwargs):  
         current_joint = self.get_current_posj()
         if 85 <= current_joint[2] <= 95 and 85 <= current_joint[4] <= 95 :
             vertical_current_pos = self.get_current_posx()
