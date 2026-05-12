@@ -369,6 +369,20 @@ class DSRobotController:
     def get_current_posj(self):
         from DSR_ROBOT2 import get_current_posj
 
-        joint, _ = get_current_posj()
+        raw = get_current_posj()
+
+        # DSR 반환형이 (joint, sol) 형태인 경우
+        if isinstance(raw, tuple):
+            joint = raw[0]
+
+        # DSR 반환형이 [joint, sol] 형태인 경우
+        elif isinstance(raw, list) and len(raw) > 0 and isinstance(raw[0], (list, tuple)):
+            joint = raw[0]
+
+        # DSR 반환형이 [j1, j2, j3, j4, j5, j6] 형태인 경우
+        else:
+            joint = raw
+
+        joint = list(joint[:6])
         print(joint)
         return joint

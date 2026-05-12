@@ -29,23 +29,23 @@ class TestVoiceCommand(Node):
             #     "desc": "1123123123123123",
             # },
             {
-                "action": "pick_horizontal",
-                "params": {'target':'shaker'
+                "action": "pick_vertical",
+                "params": {'target':'plate'
                     },
                 "desc": '잡기'
             },
-            {
-                "action": "shake",
-                "params": {
-                    },
-                'decs' : '흔들기'
-            },
-            {
-                "action": "trash",
-                "params": {
-                    },
-                'decs' : '버리기'
-            },
+            # {
+            #     "action": "pour",
+            #     "params": {
+            #         },
+            #     'decs' : '흔들기'
+            # },
+            # {
+            #     "action": "trash",
+            #     "params": {
+            #         },
+            #     'decs' : '버리기'
+            # },
             {
                 "action": "reset",
                 "params": {},
