@@ -1,7 +1,10 @@
 #include <rclcpp/rclcpp.hpp>
-#include <std_msgs/msg/string.hpp> // 💡 ROS String 메시지 타입 추가
+#include <std_msgs/msg/string.hpp>
 #include <behaviortree_cpp_v3/bt_factory.h>
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 #include "PopNextTask.hpp"
 #include "IsTargetRequired.hpp"
@@ -45,6 +48,8 @@ int main(int argc, char **argv) {
             tree.rootBlackboard()->set("llm_json", msg->data);
         });
 
+    auto status_pub = ros_node->create_publisher<std_msgs::msg::String>("/status", 10);
+
     RCLCPP_INFO(ros_node->get_logger(), "🌳 Behavior Tree 대기 모드 시작...");
 
     rclcpp::Rate rate(10); // 10Hz
@@ -52,6 +57,21 @@ int main(int argc, char **argv) {
 
     while (rclcpp::ok()) {
         status = tree.tickRoot();
+
+        std::string action = "none";
+        std::string target = "none";
+        try { action = tree.rootBlackboard()->get<std::string>("action"); } catch (...) {}
+        try { target = tree.rootBlackboard()->get<std::string>("target"); } catch (...) {}
+
+        json payload;
+        payload["state"]  = BT::toStr(status);
+        payload["action"] = action;
+        payload["target"] = target;
+
+        std_msgs::msg::String ros_msg;
+        ros_msg.data = payload.dump();
+        status_pub->publish(ros_msg);
+
         rclcpp::spin_some(ros_node);
         rate.sleep();
     }
