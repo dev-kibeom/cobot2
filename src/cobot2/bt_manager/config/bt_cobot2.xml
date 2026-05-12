@@ -3,17 +3,20 @@
     <BehaviorTree ID="BehaviorTree">
         <KeepRunningUntilFailure>
             <Sequence>
-                <Action ID="PopNextTask" llm_json="{llm_json}" action_name="{action}" target_name="{target}"/>
+                <Action ID="PopNextTask" estop_flag="{estop_flag}" llm_json="{llm_json}" action_name="{action}" target_name="{target}"/>
                 
                 <Fallback name="ActionPreparation">
                     
                     <Sequence name="TargetRequiredBranch">
                         <Condition ID="IsTargetRequired" target_name="{target}"/>
+                        
                         <Fallback name="SearchLogic">
                             <Condition ID="IsTargetLocated" target_name="{target}"/>
                             <Action ID="ExecutePythonAction" action_name="detect_in_place" target_name="{target}"/>
                             <Action ID="ExecutePythonAction" action_name="finding" target_name="{target}"/>
                         </Fallback>
+                        
+                        <Action ID="ExecutePythonAction" action_name="approach" target_name="{target}"/>
                     </Sequence>
                     
                     <Sequence name="NoTargetBranch">
@@ -49,6 +52,7 @@
         </Condition>
         <Action ID="PopNextTask">
             <input_port name="llm_json"/>
+            <input_port name="estop_flag"/>
             <output_port default="{action}" name="action_name"/>
             <output_port default="{target}" name="target_name"/>
         </Action>
